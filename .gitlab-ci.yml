@@ -1,0 +1,50 @@
+# DO NOT CHANGE THIS FILE!
+#
+# This is run on a non-standard gitlab runner so any changes you make may break in unexpected ways.
+# If you feel for some reason this file MUST be changed, please post on the course forum so it can
+# be discussed between you and course staff.
+#
+image: cs2511docker/cs2511-gradle-9.2-ass1:505b49d
+
+stages:
+  - lint
+  - tests
+  - dryrun
+
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.console=colored"
+
+lint:
+  stage: lint
+  needs: []
+  script:
+    - gradle lint
+  allow_failure: true
+
+test:
+  stage: tests
+  needs: []
+  script:
+    - gradle compile
+    - echo "Running your tests"
+    - gradle test
+    - echo "Successfully passed your own tests, now running dryrun build"
+    - rm -rf app/src/test/
+    - tar -xvf /data/assignment-i-tests.tar -C app/src/
+    - gradle compile
+
+dryrun-tests:
+  stage: dryrun
+  needs: []
+  when: manual
+  allow_failure: true
+  script:
+    - rm -rf app/src/test/
+    - tar -xvf /data/assignment-i-tests.tar -C app/src/
+    - echo "Checking if your code compiles with the dryrun tests"
+    - gradle compile
+    - echo "Checking if your code passes the dryrun tests."
+    - echo "If you have not completed all tasks, you should expect some tests to fail"
+    - gradle test
+  after_script:
+    - echo "If you have not completed all tasks, you should expect some tests to fail"

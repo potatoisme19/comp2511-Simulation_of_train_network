@@ -1,0 +1,13 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.checkstyle.version": "10.21.4",
+  "java.checkstyle.configuration": "${workspaceFolder}/config/checkstyle.xml",
+
+  "java.format.comments.enabled": false,
+  "java.import.gradle.version": "9.2.0",
+  "editor.formatOnSave": true,
+  "editor.tabSize": 4,
+  "editor.detectIndentation": false,
+  "editor.glyphMargin": true,
+  "workbench.editor.showIcons": true
+}
