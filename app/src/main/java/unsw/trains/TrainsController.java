@@ -19,6 +19,10 @@ import unsw.trains.stations.Station;
 public class TrainsController {
     private List<String> stationIds = new ArrayList<>();
     private List<Station> stationObjects = new ArrayList<>();
+    private List<String> trackIds = new ArrayList<>();
+    private List<String> trackFromIds = new ArrayList<>();
+    private List<String> trackToIds = new ArrayList<>();
+    private List<TrackType> trackTypes = new ArrayList<>();
 
     public void createStation(String stationId, String type, double x, double y) {
         Station station;
@@ -43,7 +47,10 @@ public class TrainsController {
     }
 
     public void createTrack(String trackId, String fromStationId, String toStationId) {
-        // Todo: Task aii
+        trackIds.add(trackId);
+        trackFromIds.add(fromStationId);
+        trackToIds.add(toStationId);
+        trackTypes.add(TrackType.NORMAL);
     }
 
     public void createTrain(String trainId, String type, String stationId, List<String> route)
