@@ -60,10 +60,14 @@ public class TrainsController {
         else
             speed = 5.0;
 
-        Train train = new Train(trainId, type, stationId, route, speed, isCyclical);
+        Station station = findStationById(stationId);
+        double x = station.getX();
+        double y = station.getY();
+
+        Train train = new Train(trainId, type, stationId, route, speed, isCyclical, x, y);
         trains.add(train);
 
-        findStationById(stationId).addTrain(trainId);
+        station.addTrain(trainId);
     }
 
     private boolean hasTrackBetween(String s1, String s2) {
@@ -85,18 +89,27 @@ public class TrainsController {
     }
 
     public List<String> listStationIds() {
-        // Todo: Task aiv
-        return new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        for (Station s : stations) {
+            ids.add(s.getId());
+        }
+        return ids;
     }
 
     public List<String> listTrackIds() {
-        // Todo: Task av
-        return new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        for (Track t : tracks) {
+            ids.add(t.getId());
+        }
+        return ids;
     }
 
     public List<String> listTrainIds() {
-        // Todo: Task avi
-        return new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        for (Train t : trains) {
+            ids.add(t.getId());
+        }
+        return ids;
     }
 
     public TrainInfoResponse getTrainInfo(String trainId) {

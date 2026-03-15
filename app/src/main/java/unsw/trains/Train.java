@@ -15,9 +15,13 @@ public class Train {
     private List<Cargo> cargo;
     private double x;
     private double y;
-    private boolean isCyclical; // Store this once at creation
+    private boolean isCyclical;
+    private int maxPassengers;
+    private int maxCargoWeight;
+    private int currentLoad;
 
-    public Train(String id, String type, String stationId, List<String> route, double speed, boolean isCyclical) {
+    public Train(String id, String type, String stationId, List<String> route,
+            double speed, boolean isCyclical, double x, double y) {
         this.id = id;
         this.type = type;
         this.currentStation = stationId;
@@ -27,25 +31,24 @@ public class Train {
         this.speed = speed;
         this.passengers = new ArrayList<>();
         this.cargo = new ArrayList<>();
-        this.isCyclical = isCyclical; // Store it
+        this.isCyclical = isCyclical;
+        this.x = x;
+        this.y = y;
     }
 
     public String getNextStation() {
         if (type.equals("PassengerTrain") || type.equals("CargoTrain")) {
-            // Linear route - bounce back and forth
             int nextIndex = routeIndex + direction;
             if (nextIndex < 0 || nextIndex >= route.size()) {
                 direction *= -1;
                 nextIndex = routeIndex + direction;
             }
             return route.get(nextIndex);
-        } else { // BulletTrain
+        } else {
             if (isCyclical) {
-                // Cyclical - wrap around
                 int nextIndex = (routeIndex + 1) % route.size();
                 return route.get(nextIndex);
             } else {
-                // Linear - same as above
                 int nextIndex = routeIndex + direction;
                 if (nextIndex < 0 || nextIndex >= route.size()) {
                     direction *= -1;
@@ -54,5 +57,45 @@ public class Train {
                 return route.get(nextIndex);
             }
         }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getCurrentStation() {
+        return currentStation;
+    }
+
+    public double getSpeed() {
+        return speed;
+    }
+
+    public List<Passenger> getPassengers() {
+        return passengers;
+    }
+
+    public List<Cargo> getCargo() {
+        return cargo;
+    }
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public int getMaxPassengers() {
+        return maxPassengers;
+    }
+
+    public int getMaxCargoWeight() {
+        return maxCargoWeight;
+    }
+
+    public int getCurrentLoad() {
+        return currentLoad;
     }
 }
