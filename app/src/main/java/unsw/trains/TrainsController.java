@@ -5,6 +5,7 @@ import java.util.List;
 
 import unsw.exceptions.InvalidRouteException;
 import unsw.response.models.*;
+import unsw.utils.Position;
 
 /**
  * The controller for the Trains system.
@@ -113,17 +114,77 @@ public class TrainsController {
     }
 
     public TrainInfoResponse getTrainInfo(String trainId) {
-        // Todo: Task avii
+        for (Train t : trains) {
+            if (t.getId().equals(trainId)) {
+                List<LoadInfoResponse> loads = new ArrayList<>();
+
+                for (Passenger p : t.getPassengers()) {
+                    String passengerType = p.isMechanic() ? "Mechanic" : "Passenger";
+                    loads.add(new LoadInfoResponse(p.getId(), passengerType));
+                }
+
+                for (Cargo c : t.getCargo()) {
+                    String cargoType = c.isPerishable() ? "PerishableCargo" : "Cargo";
+                    loads.add(new LoadInfoResponse(c.getId(), cargoType));
+                }
+
+                return new TrainInfoResponse(
+                        t.getId(),
+                        t.getCurrentStation(),
+                        t.getType(),
+                        new Position(t.getX(), t.getY()),
+                        loads);
+            }
+        }
         return null;
     }
 
     public StationInfoResponse getStationInfo(String stationId) {
-        // Todo: Task aviii
+        for (Station s : stations) {
+            if (s.getId().equals(stationId)) {
+                List<LoadInfoResponse> loads = new ArrayList<>();
+
+                for (Passenger p : s.getPassengers()) {
+                    String passengerType = p.isMechanic() ? "Mechanic" : "Passenger";
+                    loads.add(new LoadInfoResponse(p.getId(), passengerType));
+                }
+
+                for (Cargo c : s.getCargo()) {
+                    String cargoType = c.isPerishable() ? "PerishableCargo" : "Cargo";
+                    loads.add(new LoadInfoResponse(c.getId(), cargoType));
+                }
+
+                List<TrainInfoResponse> trainsAtStation = new ArrayList<>();
+                for (String trainId : s.getStoppedTrains()) {
+                    TrainInfoResponse trainInfo = getTrainInfo(trainId);
+                    if (trainInfo != null) {
+                        trainsAtStation.add(trainInfo);
+                    }
+                }
+
+                return new StationInfoResponse(
+                        s.getId(),
+                        s.getType(),
+                        new Position(s.getX(), s.getY()),
+                        loads,
+                        trainsAtStation);
+            }
+        }
         return null;
     }
 
     public TrackInfoResponse getTrackInfo(String trackId) {
-        // Todo: Task aix
+        for (Track t : tracks) {
+            if (t.getId().equals(trackId)) {
+
+                return new TrackInfoResponse(
+                        t.getId(),
+                        t.getFromStationId(),
+                        t.getToStationId(),
+                        t.getType(),
+                        t.getDurability());
+            }
+        }
         return null;
     }
 

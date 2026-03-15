@@ -71,12 +71,16 @@ public class Train {
         return speed;
     }
 
+    public String getType() {
+        return type;
+    }
+
     public List<Passenger> getPassengers() {
-        return passengers;
+        return new ArrayList<>(passengers);
     }
 
     public List<Cargo> getCargo() {
-        return cargo;
+        return new ArrayList<>(cargo);
     }
 
     public double getX() {
@@ -97,5 +101,9 @@ public class Train {
 
     public int getCurrentLoad() {
         return currentLoad;
+    }
+
+    public List<String> getRoute() {
+        return new ArrayList<>(route);
     }
 }
