@@ -5,6 +5,11 @@ import java.util.List;
 
 import unsw.exceptions.InvalidRouteException;
 import unsw.response.models.*;
+import unsw.trains.stations.CargoStation;
+import unsw.trains.stations.CentralStation;
+import unsw.trains.stations.DepotStation;
+import unsw.trains.stations.PassengerStation;
+import unsw.trains.stations.Station;
 
 /**
  * The controller for the Trains system.
@@ -12,7 +17,9 @@ import unsw.response.models.*;
  * The method signatures here are provided for you. Do NOT change the method signatures.
  */
 public class TrainsController {
-    // Add any fields here if necessary
+    private List<String> stationIds = new ArrayList<>();
+    private List<Station> stationObjects = new ArrayList<>();
+
     public void createStation(String stationId, String type, double x, double y) {
         Station station;
         switch (type) {
@@ -31,7 +38,8 @@ public class TrainsController {
             default:
                 throw new IllegalArgumentException("Unknown station type: " + type);
         }
-        station.put(stationId, station);
+        stationIds.add(stationId);
+        stationObjects.add(station);
     }
 
     public void createTrack(String trackId, String fromStationId, String toStationId) {
