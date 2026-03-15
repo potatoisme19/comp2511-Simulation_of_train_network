@@ -14,7 +14,24 @@ import unsw.response.models.*;
 public class TrainsController {
     // Add any fields here if necessary
     public void createStation(String stationId, String type, double x, double y) {
-        // Todo: Task ai
+        Station station;
+        switch (type) {
+            case "PassengerStation":
+                station = new PassengerStation(stationId, x, y);
+                break;
+            case "CargoStation":
+                station = new CargoStation(stationId, x, y);
+                break;
+            case "CentralStation":
+                station = new CentralStation(stationId, x, y);
+                break;
+            case "DepotStation":
+                station = new DepotStation(stationId, x, y);
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown station type: " + type);
+        }
+        station.put(stationId, station);
     }
 
     public void createTrack(String trackId, String fromStationId, String toStationId) {
