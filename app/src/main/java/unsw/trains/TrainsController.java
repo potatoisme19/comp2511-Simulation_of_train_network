@@ -5,11 +5,6 @@ import java.util.List;
 
 import unsw.exceptions.InvalidRouteException;
 import unsw.response.models.*;
-import unsw.trains.stations.CargoStation;
-import unsw.trains.stations.CentralStation;
-import unsw.trains.stations.DepotStation;
-import unsw.trains.stations.PassengerStation;
-import unsw.trains.stations.Station;
 
 /**
  * The controller for the Trains system.
@@ -17,45 +12,76 @@ import unsw.trains.stations.Station;
  * The method signatures here are provided for you. Do NOT change the method signatures.
  */
 public class TrainsController {
-    private List<String> stationIds = new ArrayList<>();
-    private List<Station> stationObjects = new ArrayList<>();
-    private List<String> trackIds = new ArrayList<>();
-    private List<String> trackFromIds = new ArrayList<>();
-    private List<String> trackToIds = new ArrayList<>();
-    private List<TrackType> trackTypes = new ArrayList<>();
+    private List<Station> stations = new ArrayList<>();
+    private List<Track> tracks = new ArrayList<>();
+    private List<Train> trains = new ArrayList<>();
 
     public void createStation(String stationId, String type, double x, double y) {
-        Station station;
+        int maxTrains;
         switch (type) {
             case "PassengerStation":
-                station = new PassengerStation(stationId, x, y);
+                maxTrains = 2;
                 break;
             case "CargoStation":
-                station = new CargoStation(stationId, x, y);
+                maxTrains = 4;
                 break;
             case "CentralStation":
-                station = new CentralStation(stationId, x, y);
+                maxTrains = 8;
                 break;
             case "DepotStation":
-                station = new DepotStation(stationId, x, y);
+                maxTrains = 8;
                 break;
             default:
-                throw new IllegalArgumentException("Unknown station type: " + type);
+                maxTrains = 0;
         }
-        stationIds.add(stationId);
-        stationObjects.add(station);
+
+        Station station = new Station(stationId, type, x, y, maxTrains);
+        stations.add(station);
     }
 
     public void createTrack(String trackId, String fromStationId, String toStationId) {
-        trackIds.add(trackId);
-        trackFromIds.add(fromStationId);
-        trackToIds.add(toStationId);
-        trackTypes.add(TrackType.NORMAL);
+        Track track = new Track(trackId, fromStationId, toStationId);
+        tracks.add(track);
     }
 
     public void createTrain(String trainId, String type, String stationId, List<String> route)
             throws InvalidRouteException {
-        // Todo: Task aiii
+        boolean isCyclical = hasTrackBetween(route.get(0), route.get(route.size() - 1));
+
+        if ((type.equals("PassengerTrain") || type.equals("CargoTrain")) && isCyclical) {
+            throw new InvalidRouteException("PassengerTrain and CargoTrain can only be in linear routes");
+        }
+
+        double speed;
+        if (type.equals("PassengerTrain"))
+            speed = 2.0;
+        else if (type.equals("CargoTrain"))
+            speed = 3.0;
+        else
+            speed = 5.0;
+
+        Train train = new Train(trainId, type, stationId, route, speed, isCyclical);
+        trains.add(train);
+
+        findStationById(stationId).addTrain(trainId);
+    }
+
+    private boolean hasTrackBetween(String s1, String s2) {
+
+        for (Track t : tracks) {
+            if (t.connects(s1, s2))
+                return true;
+        }
+        return false;
+    }
+
+    private Station findStationById(String stationId) {
+        for (Station s : stations) {
+            if (s.getId().equals(stationId)) {
+                return s;
+            }
+        }
+        return null;
     }
 
     public List<String> listStationIds() {

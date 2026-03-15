@@ -1,29 +1,33 @@
-package unsw.trains.stations;
+package unsw.trains;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import unsw.trains.Cargo;
-import unsw.trains.Passenger;
-
-public abstract class Station {
+public class Station {
     private String id;
+    private String type;
     private double x;
     private double y;
     private int maxTrains;
-    private List<String> stoppedTrains = new ArrayList<>();
-    private List<Passenger> passengers = new ArrayList<>();
-    private List<Cargo> cargo = new ArrayList<>();
+    private List<String> stoppedTrains;
+    private List<Passenger> passengers;
+    private List<Cargo> cargo;
 
-    public Station(String id, double x, double y, int maxTrains) {
+    public Station(String id, String type, double x, double y, int maxTrains) {
         this.id = id;
+        this.type = type;
         this.x = x;
         this.y = y;
         this.maxTrains = maxTrains;
+        this.stoppedTrains = new ArrayList<>();
     }
 
     public String getId() {
         return id;
+    }
+
+    public String getType() {
+        return type;
     }
 
     public double getX() {
@@ -34,14 +38,13 @@ public abstract class Station {
         return y;
     }
 
-    public boolean canStopTrain() {
-        return stoppedTrains.size() < maxTrains;
+    public int getMaxTrains() {
+        return maxTrains;
     }
 
+    // Add this method
     public void addTrain(String trainId) {
-        if (canStopTrain()) {
-            stoppedTrains.add(trainId);
-        }
+        stoppedTrains.add(trainId);
     }
 
     public void removeTrain(String trainId) {
@@ -52,12 +55,22 @@ public abstract class Station {
         return new ArrayList<>(stoppedTrains);
     }
 
-    public abstract boolean canLoadPassengers();
+    public boolean canStopTrain() {
+        return stoppedTrains.size() < maxTrains;
+    }
 
-    public abstract boolean canLoadCargo();
+    public boolean canLoadPassengers() {
+        return type.equals("PassengerStation") || type.equals("CentralStation");
+    }
+
+    public boolean canLoadCargo() {
+        return type.equals("CargoStation") || type.equals("CentralStation");
+    }
 
     public void addPassenger(Passenger passenger) {
-        passengers.add(passenger);
+        if (canLoadPassengers()) {
+            passengers.add(passenger);
+        }
     }
 
     public void removePassenger(String passengerId) {
@@ -69,7 +82,9 @@ public abstract class Station {
     }
 
     public void addCargo(Cargo cargoItem) {
-        cargo.add(cargoItem);
+        if (canLoadCargo()) {
+            cargo.add(cargoItem);
+        }
     }
 
     public void removeCargo(String cargoId) {
