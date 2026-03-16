@@ -119,17 +119,7 @@ public class TrainsController {
     public TrainInfoResponse getTrainInfo(String trainId) {
         for (Train t : trains) {
             if (t.getId().equals(trainId)) {
-                List<LoadInfoResponse> loads = new ArrayList<>();
-
-                for (Passenger p : t.getPassengers()) {
-                    String passengerType = p.isMechanic() ? "Mechanic" : "Passenger";
-                    loads.add(new LoadInfoResponse(p.getId(), passengerType));
-                }
-
-                for (Cargo c : t.getCargo()) {
-                    String cargoType = c.isPerishable() ? "PerishableCargo" : "Cargo";
-                    loads.add(new LoadInfoResponse(c.getId(), cargoType));
-                }
+                List<LoadInfoResponse> loads = combineLoads(t.getPassengers(), t.getCargo());
 
                 return new TrainInfoResponse(
                         t.getId(),
@@ -145,25 +135,8 @@ public class TrainsController {
     public StationInfoResponse getStationInfo(String stationId) {
         for (Station s : stations) {
             if (s.getId().equals(stationId)) {
-                List<LoadInfoResponse> loads = new ArrayList<>();
-
-                for (Passenger p : s.getPassengers()) {
-                    String passengerType = p.isMechanic() ? "Mechanic" : "Passenger";
-                    loads.add(new LoadInfoResponse(p.getId(), passengerType));
-                }
-
-                for (Cargo c : s.getCargo()) {
-                    String cargoType = c.isPerishable() ? "PerishableCargo" : "Cargo";
-                    loads.add(new LoadInfoResponse(c.getId(), cargoType));
-                }
-
-                List<TrainInfoResponse> trainsAtStation = new ArrayList<>();
-                for (String trainId : s.getStoppedTrains()) {
-                    TrainInfoResponse trainInfo = getTrainInfo(trainId);
-                    if (trainInfo != null) {
-                        trainsAtStation.add(trainInfo);
-                    }
-                }
+                List<LoadInfoResponse> loads = combineLoads(s.getPassengers(), s.getCargo());
+                List<TrainInfoResponse> trainsAtStation = getTrainInfos(s.getStoppedTrains());
 
                 return new StationInfoResponse(
                         s.getId(),
@@ -189,6 +162,56 @@ public class TrainsController {
             }
         }
         return null;
+    }
+
+    private String getPassengerType(Passenger p) {
+        if (p.isMechanic()) {
+            return "Mechanic";
+        } else {
+            return "Passenger";
+        }
+    }
+
+    private String getCargoType(Cargo c) {
+        if (c.isPerishable()) {
+            return "PerishableCargo";
+        } else {
+            return "Cargo";
+        }
+    }
+
+    private List<LoadInfoResponse> passengersToLoads(List<Passenger> passengers) {
+        List<LoadInfoResponse> loads = new ArrayList<>();
+        for (Passenger p : passengers) {
+            loads.add(new LoadInfoResponse(p.getId(), getPassengerType(p)));
+        }
+        return loads;
+    }
+
+    private List<LoadInfoResponse> cargoToLoads(List<Cargo> cargoList) {
+        List<LoadInfoResponse> loads = new ArrayList<>();
+        for (Cargo c : cargoList) {
+            loads.add(new LoadInfoResponse(c.getId(), getCargoType(c)));
+        }
+        return loads;
+    }
+
+    private List<LoadInfoResponse> combineLoads(List<Passenger> passengers, List<Cargo> cargoList) {
+        List<LoadInfoResponse> loads = new ArrayList<>();
+        loads.addAll(passengersToLoads(passengers));
+        loads.addAll(cargoToLoads(cargoList));
+        return loads;
+    }
+
+    private List<TrainInfoResponse> getTrainInfos(List<String> trainIds) {
+        List<TrainInfoResponse> trainInfos = new ArrayList<>();
+        for (String trainId : trainIds) {
+            TrainInfoResponse trainInfo = getTrainInfo(trainId);
+            if (trainInfo != null) {
+                trainInfos.add(trainInfo);
+            }
+        }
+        return trainInfos;
     }
 
     public void simulate() {
