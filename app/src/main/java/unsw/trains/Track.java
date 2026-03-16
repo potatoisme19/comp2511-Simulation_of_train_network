@@ -8,7 +8,7 @@ public class Track {
     private String toStationId;
     private TrackType type;
     private int durability;
-    private double distance; // You might calculate this later
+    private double distance;
 
     public Track(String id, String fromStationId, String toStationId) {
         this(id, fromStationId, toStationId, TrackType.NORMAL, 10);

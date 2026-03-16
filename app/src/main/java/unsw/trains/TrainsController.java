@@ -18,25 +18,24 @@ public class TrainsController {
     private List<Train> trains = new ArrayList<>();
 
     public void createStation(String stationId, String type, double x, double y) {
-        int maxTrains;
+        Station station;
         switch (type) {
             case "PassengerStation":
-                maxTrains = 2;
+                station = new PassengerStation(stationId, x, y);
                 break;
             case "CargoStation":
-                maxTrains = 4;
+                station = new CargoStation(stationId, x, y);
                 break;
             case "CentralStation":
-                maxTrains = 8;
+                station = new CentralStation(stationId, x, y);
                 break;
             case "DepotStation":
-                maxTrains = 8;
+                station = new DepotStation(stationId, x, y);
                 break;
             default:
-                maxTrains = 0;
+                station = null;
         }
 
-        Station station = new Station(stationId, type, x, y, maxTrains);
         stations.add(station);
     }
 
@@ -50,24 +49,28 @@ public class TrainsController {
         boolean isCyclical = hasTrackBetween(route.get(0), route.get(route.size() - 1));
 
         if ((type.equals("PassengerTrain") || type.equals("CargoTrain")) && isCyclical) {
-            throw new InvalidRouteException("PassengerTrain and CargoTrain can only be in linear routes");
+            throw new InvalidRouteException("PassengerTrain and CargoTrain can only be on linear route");
         }
-
-        double speed;
-        if (type.equals("PassengerTrain"))
-            speed = 2.0;
-        else if (type.equals("CargoTrain"))
-            speed = 3.0;
-        else
-            speed = 5.0;
 
         Station station = findStationById(stationId);
         double x = station.getX();
         double y = station.getY();
 
-        Train train = new Train(trainId, type, stationId, route, speed, isCyclical, x, y);
-        trains.add(train);
+        Train train;
+        double speed;
 
+        if (type.equals("PassengerTrain")) {
+            speed = 2.0;
+            train = new PassengerTrain(trainId, stationId, route, speed, isCyclical, x, y, 50);
+        } else if (type.equals("CargoTrain")) {
+            speed = 3.0;
+            train = new CargoTrain(trainId, stationId, route, speed, isCyclical, x, y, 5000);
+        } else {
+            speed = 5.0;
+            train = new BulletTrain(trainId, stationId, route, speed, isCyclical, x, y, 71);
+        }
+
+        trains.add(train);
         station.addTrain(trainId);
     }
 

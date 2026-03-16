@@ -3,7 +3,7 @@ package unsw.trains;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Station {
+public abstract class Station {
     private String id;
     private String type;
     private double x;
@@ -20,6 +20,8 @@ public class Station {
         this.y = y;
         this.maxTrains = maxTrains;
         this.stoppedTrains = new ArrayList<>();
+        this.passengers = new ArrayList<>();
+        this.cargo = new ArrayList<>();
     }
 
     public String getId() {
@@ -42,7 +44,6 @@ public class Station {
         return maxTrains;
     }
 
-    // Add this method
     public void addTrain(String trainId) {
         stoppedTrains.add(trainId);
     }
@@ -59,13 +60,9 @@ public class Station {
         return stoppedTrains.size() < maxTrains;
     }
 
-    public boolean canLoadPassengers() {
-        return type.equals("PassengerStation") || type.equals("CentralStation");
-    }
+    public abstract boolean canLoadPassengers();
 
-    public boolean canLoadCargo() {
-        return type.equals("CargoStation") || type.equals("CentralStation");
-    }
+    public abstract boolean canLoadCargo();
 
     public void addPassenger(Passenger passenger) {
         if (canLoadPassengers()) {
@@ -74,7 +71,9 @@ public class Station {
     }
 
     public void removePassenger(String passengerId) {
-        passengers.removeIf(p -> p.getId().equals(passengerId));
+        if (canLoadPassengers()) {
+            passengers.removeIf(p -> p.getId().equals(passengerId));
+        }
     }
 
     public List<Passenger> getPassengers() {
@@ -88,7 +87,9 @@ public class Station {
     }
 
     public void removeCargo(String cargoId) {
-        cargo.removeIf(c -> c.getId().equals(cargoId));
+        if (canLoadCargo()) {
+            cargo.removeIf(c -> c.getId().equals(cargoId));
+        }
     }
 
     public List<Cargo> getCargo() {
