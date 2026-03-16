@@ -17,20 +17,21 @@ public class TrainsController {
     private static final int PASSENGER_TRAIN_MAX_PASSENGERS = 50;
     private static final int CARGO_TRAIN_MAX_WEIGHT = 5000;
     private static final int BULLET_TRAIN_MAX_PASSENGERS = 71;
-    private static final int BULLET_TRAIN_MAX_WEIGHT = 5000;
 
     private static final double PASSENGER_TRAIN_SPEED = 2.0;
     private static final double CARGO_TRAIN_SPEED = 3.0;
     private static final double BULLET_TRAIN_SPEED = 5.0;
 
-    private static final double SLOWDOWN_RATE = 0.0001; // 0.01% per kg
+    private static final double SLOWDOWN_RATE = 0.0001;
 
-    private static final int INITIAL_DURABILITY = 10;
     private static final int MECHANIC_REPAIR_AMOUNT = 5;
     private static final int AUTO_REPAIR_AMOUNT = 1;
 
-    private static final int BASE_DAMAGE = 1;
     private static final int WEIGHT_DIVISOR = 1000;
+
+    private static final int REPAIR_TRAIN_MAX_PASSENGERS = 50;
+    private static final double REPAIR_TRAIN_SPEED = 2.0;
+    private static final int MECHANIC_REPAIR_BONUS = 2;
 
     private List<Station> stations = new ArrayList<>();
     private List<Track> tracks = new ArrayList<>();
@@ -85,6 +86,9 @@ public class TrainsController {
         } else if (type.equals("CargoTrain")) {
             speed = CARGO_TRAIN_SPEED;
             train = new CargoTrain(trainId, stationId, route, speed, isCyclical, x, y, CARGO_TRAIN_MAX_WEIGHT);
+        } else if (type.equals("RepairTrain")) {
+            speed = REPAIR_TRAIN_SPEED;
+            train = new RepairTrain(trainId, stationId, route, speed, isCyclical, x, y, REPAIR_TRAIN_MAX_PASSENGERS);
         } else {
             speed = BULLET_TRAIN_SPEED;
             train = new BulletTrain(trainId, stationId, route, speed, isCyclical, x, y, BULLET_TRAIN_MAX_PASSENGERS);
@@ -279,6 +283,10 @@ public class TrainsController {
             return;
         }
 
+        if (train.isRepairTrain()) {
+            return;
+        }
+
         int totalWeight = calculateTrainLoadWeight(train);
         int damage = 1 + (int) Math.ceil(totalWeight / (double) WEIGHT_DIVISOR);
 
@@ -316,13 +324,32 @@ public class TrainsController {
             updateTrackStatus(track);
 
             if (track.getType() == TrackType.BROKEN && track.isBreakable()) {
-                track.repair(AUTO_REPAIR_AMOUNT);
+                int repairRate = calculateRepairRateForTrack(track);
+                track.repair(repairRate);
 
                 if (track.getDurability() > 0) {
                     track.setType(TrackType.UNBROKEN);
                 }
             }
         }
+    }
+
+    private int calculateRepairRateForTrack(Track track) {
+        int repairRate = AUTO_REPAIR_AMOUNT;
+        for (Train train : trains) {
+            if (train.isRepairTrain() && isTrainOnTrack(train, track)) {
+                RepairTrain repairTrain = (RepairTrain) train;
+                int mechanicCount = repairTrain.countMechanics();
+                repairRate += mechanicCount * MECHANIC_REPAIR_BONUS;
+            }
+        }
+        return repairRate;
+    }
+
+    private boolean isTrainOnTrack(Train train, Track track) {
+        String currentStation = train.getCurrentStation();
+        String nextStation = train.getNextStation();
+        return (currentStation == null && track.connects(currentStation, nextStation));
     }
 
     private void handleDeparture(Train train) {
@@ -486,15 +513,15 @@ public class TrainsController {
     }
 
     private void updateTrainSpeed(Train train) {
-        if (!train.canBoardCargo()) {
-            train.setSpeed(PASSENGER_TRAIN_SPEED);
+        if (train.getType().equals("RepairTrain")) {
+            train.setSpeed(REPAIR_TRAIN_SPEED);
             return;
         }
 
         double baseSpeed;
-        if (train.getType().equals("CargoTrain")) {
+        if (train.getType().equals("PassengerTrain")) {
             baseSpeed = PASSENGER_TRAIN_SPEED;
-        } else if (train instanceof CargoTrain) {
+        } else if (train.getType().equals("CargoTrain")) {
             baseSpeed = CARGO_TRAIN_SPEED;
         } else {
             baseSpeed = BULLET_TRAIN_SPEED;
@@ -716,10 +743,18 @@ public class TrainsController {
             return;
         }
 
+        RepairTrain repairTrain = (RepairTrain) train;
+        int mechanicCount = repairTrain.countMechanics();
+
+        if (mechanicCount == 0) {
+            return;
+        }
+
         for (Track track : tracks) {
             if (track.connects(station.getId(), track.getOtherStation(station.getId()))) {
                 if (track.isBreakable()) {
-                    track.repair(MECHANIC_REPAIR_AMOUNT);
+                    int repair = MECHANIC_REPAIR_AMOUNT + (mechanicCount * MECHANIC_REPAIR_BONUS);
+                    track.repair(repair);
 
                     if (track.getType() == TrackType.BROKEN && track.getDurability() > 0) {
                         track.setType(TrackType.UNBROKEN);

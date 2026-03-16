@@ -9,21 +9,26 @@ public class Track {
     private TrackType type;
     private int durability;
     private boolean isBreakable;
+    private static final int MAXIMUM_DURBILITY = 10;
+    private static final int MINIMUM_DURABILITY = 0;
 
-    // Constructor for Task A (normal tracks)
     public Track(String id, String fromStationId, String toStationId) {
-        this(id, fromStationId, toStationId, TrackType.NORMAL, 10, false);
+        this(id, fromStationId, toStationId, TrackType.NORMAL, MAXIMUM_DURBILITY, false);
     }
 
-    // Constructor for Task C (breakable tracks)
     public Track(String id, String fromStationId, String toStationId, boolean isBreakable) {
-        this(id, fromStationId, toStationId,
-                isBreakable ? TrackType.UNBROKEN : TrackType.NORMAL,
-                10,
-                isBreakable);
+        this.id = id;
+        this.fromStationId = fromStationId;
+        this.toStationId = toStationId;
+        this.isBreakable = isBreakable;
+        this.durability = MAXIMUM_DURBILITY;
+        if (isBreakable) {
+            this.type = TrackType.UNBROKEN;
+        } else {
+            this.type = TrackType.NORMAL;
+        }
     }
 
-    // Full constructor
     public Track(String id, String fromStationId, String toStationId, TrackType type, int durability,
             boolean isBreakable) {
         this.id = id;
@@ -63,7 +68,7 @@ public class Track {
     }
 
     public void setDurability(int durability) {
-        this.durability = Math.max(0, Math.min(10, durability));
+        this.durability = Math.max(MINIMUM_DURABILITY, Math.min(MAXIMUM_DURBILITY, durability));
     }
 
     public boolean connects(String stationId1, String stationId2) {
@@ -81,13 +86,13 @@ public class Track {
 
     public void repair(int amount) {
         if (isBreakable) {
-            durability = Math.min(10, durability + amount);
+            durability = Math.min(MAXIMUM_DURBILITY, durability + amount);
         }
     }
 
     public void damage(int amount) {
         if (isBreakable) {
-            durability = Math.max(0, durability - amount);
+            durability = Math.max(MINIMUM_DURABILITY, durability - amount);
         }
     }
 }
