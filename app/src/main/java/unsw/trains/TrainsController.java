@@ -14,6 +14,24 @@ import unsw.utils.TrackType;
  * The method signatures here are provided for you. Do NOT change the method signatures.
  */
 public class TrainsController {
+    private static final int PASSENGER_TRAIN_MAX_PASSENGERS = 50;
+    private static final int CARGO_TRAIN_MAX_WEIGHT = 5000;
+    private static final int BULLET_TRAIN_MAX_PASSENGERS = 71;
+    private static final int BULLET_TRAIN_MAX_WEIGHT = 5000;
+
+    private static final double PASSENGER_TRAIN_SPEED = 2.0;
+    private static final double CARGO_TRAIN_SPEED = 3.0;
+    private static final double BULLET_TRAIN_SPEED = 5.0;
+
+    private static final double SLOWDOWN_RATE = 0.0001; // 0.01% per kg
+
+    private static final int INITIAL_DURABILITY = 10;
+    private static final int MECHANIC_REPAIR_AMOUNT = 5;
+    private static final int AUTO_REPAIR_AMOUNT = 1;
+
+    private static final int BASE_DAMAGE = 1;
+    private static final int WEIGHT_DIVISOR = 1000;
+
     private List<Station> stations = new ArrayList<>();
     private List<Track> tracks = new ArrayList<>();
     private List<Train> trains = new ArrayList<>();
@@ -40,8 +58,8 @@ public class TrainsController {
         stations.add(station);
     }
 
-    public void createTrack(String trackId, String fromStationId, String toStationId) {
-        Track track = new Track(trackId, fromStationId, toStationId);
+    public void createTrack(String trackId, String fromStationId, String toStationId, boolean isBreakable) {
+        Track track = new Track(trackId, fromStationId, toStationId, isBreakable);
         tracks.add(track);
     }
 
@@ -61,14 +79,15 @@ public class TrainsController {
         double speed;
 
         if (type.equals("PassengerTrain")) {
-            speed = 2.0;
-            train = new PassengerTrain(trainId, stationId, route, speed, isCyclical, x, y, 50);
+            speed = PASSENGER_TRAIN_SPEED;
+            train = new PassengerTrain(trainId, stationId, route, speed, isCyclical, x, y,
+                    PASSENGER_TRAIN_MAX_PASSENGERS);
         } else if (type.equals("CargoTrain")) {
-            speed = 3.0;
-            train = new CargoTrain(trainId, stationId, route, speed, isCyclical, x, y, 5000);
+            speed = CARGO_TRAIN_SPEED;
+            train = new CargoTrain(trainId, stationId, route, speed, isCyclical, x, y, CARGO_TRAIN_MAX_WEIGHT);
         } else {
-            speed = 5.0;
-            train = new BulletTrain(trainId, stationId, route, speed, isCyclical, x, y, 71);
+            speed = BULLET_TRAIN_SPEED;
+            train = new BulletTrain(trainId, stationId, route, speed, isCyclical, x, y, BULLET_TRAIN_MAX_PASSENGERS);
         }
 
         trains.add(train);
@@ -249,17 +268,39 @@ public class TrainsController {
     private boolean isTrackBroken(Train train, String nextStationId) {
         String currentStationId = train.getCurrentStation();
         Track track = findTrackBetween(currentStationId, nextStationId);
-        return (track != null && track.getType() == TrackType.BROKEN);
+        if (track.getType() == TrackType.BROKEN) {
+            return !train.isRepairTrain();
+        }
+        return false;
     }
 
-    private void updateTrackDurability(Track track) {
-        if (track != null && track.getType() != TrackType.NORMAL) {
-            track.setDurability(track.getDurability() - 1);
+    private void updateTrackDurability(Track track, Train train) {
+        if (track == null || !track.isBreakable()) {
+            return;
         }
+
+        int totalWeight = calculateTrainLoadWeight(train);
+        int damage = 1 + (int) Math.ceil(totalWeight / (double) WEIGHT_DIVISOR);
+
+        track.damage(damage);
+    }
+
+    private int calculateTrainLoadWeight(Train train) {
+        int totalWeight = 0;
+
+        for (Passenger p : train.getPassengers()) {
+            totalWeight += p.getWeight();
+        }
+
+        for (Cargo c : train.getCargo()) {
+            totalWeight += c.getWeight();
+        }
+
+        return totalWeight;
     }
 
     private void updateTrackStatus(Track track) {
-        if (track.getType() == TrackType.NORMAL) {
+        if (!track.isBreakable()) {
             return;
         }
 
@@ -273,6 +314,14 @@ public class TrainsController {
     private void updateAllTrackStatuses() {
         for (Track track : tracks) {
             updateTrackStatus(track);
+
+            if (track.getType() == TrackType.BROKEN && track.isBreakable()) {
+                track.repair(AUTO_REPAIR_AMOUNT);
+
+                if (track.getDurability() > 0) {
+                    track.setType(TrackType.UNBROKEN);
+                }
+            }
         }
     }
 
@@ -310,7 +359,7 @@ public class TrainsController {
         updateTrainRouteIndex(train);
 
         Track track = findTrackBetween(currentStationId, newStationId);
-        updateTrackDurability(track);
+        updateTrackDurability(track, train);
 
         unloadLoadsFromTrain(train, station);
 
@@ -343,36 +392,49 @@ public class TrainsController {
     }
 
     private void boardPassengersToTrain(Train train, Station station) {
-        if (!(train instanceof PassengerTrain || train instanceof BulletTrain)) {
+        if (!train.canBoardPassenger()) {
             return;
         }
 
         for (Passenger passenger : station.getPassengers()) {
             if (shouldBoardPassenger(train, passenger)) {
-                attemptBoardPassenger(train, passenger, station);
-            }
-        }
-    }
-
-    private void boardCargoToTrain(Train train, Station station) {
-        if (!(train instanceof CargoTrain || train instanceof BulletTrain)) {
-            return;
-        }
-
-        List<Cargo> boardableCargo = getBoardableCargoAtStation(train, station);
-        for (Cargo cargo : boardableCargo) {
-            if (canTrainTakeCargo(train, cargo)) {
-                if (cargo.isPerishable()) {
-                    tryBoardPerishableCargo(train, cargo, station);
-                } else {
-                    tryBoardRegularCargo(train, cargo, station);
+                if (hasSpaceForPassenger(train)) {
+                    train.addPassenger(passenger); // Use specific method
+                    station.removePassenger(passenger.getId());
                 }
             }
         }
     }
 
-    private boolean canTrainCarryCargo(Train train) {
-        return (train instanceof CargoTrain || train instanceof BulletTrain);
+    private boolean hasSpaceForPassenger(Train train) {
+        return train.getPassengers().size() < train.getMaxPassengerCapacity();
+    }
+
+    private void boardCargoToTrain(Train train, Station station) {
+        if (!train.canBoardCargo()) {
+            return;
+        }
+
+        List<Cargo> boardableCargo = getBoardableCargoAtStation(train, station);
+
+        for (Cargo cargo : boardableCargo) {
+            if (canTrainAcceptCargo(train, cargo)) {
+                if (cargo.isPerishable()) {
+                    tryBoardPerishableCargo(train, cargo, station);
+                } else {
+                    boardCargo(train, cargo, station);
+                }
+            }
+        }
+    }
+
+    private boolean canTrainAcceptCargo(Train train, Cargo cargo) {
+        return train.getCurrentLoad() + cargo.getWeight() <= train.getMaxCargoCapacity();
+    }
+
+    private void boardCargo(Train train, Cargo cargo, Station station) {
+        train.addCargo(cargo); // Using specific method instead of addLoad
+        station.removeCargo(cargo.getId());
     }
 
     private List<Cargo> getBoardableCargoAtStation(Train train, Station station) {
@@ -387,31 +449,10 @@ public class TrainsController {
         return boardableCargo;
     }
 
-    private boolean canTrainTakeCargo(Train train, Cargo cargo) {
-        if (train instanceof CargoTrain) {
-            return canCargoTrainTakeCargo((CargoTrain) train, cargo);
-        } else if (train instanceof BulletTrain) {
-            return canBulletTrainTakeCargo((BulletTrain) train, cargo);
-        }
-        return false;
-    }
-
-    private boolean canCargoTrainTakeCargo(CargoTrain train, Cargo cargo) {
-        return train.getCurrentLoad() + cargo.getWeight() <= train.getMaxCargoWeight();
-    }
-
-    private boolean canBulletTrainTakeCargo(BulletTrain train, Cargo cargo) {
-        return train.getCurrentLoad() + cargo.getWeight() <= train.getMaxCargoWeight();
-    }
-
     private void tryBoardPerishableCargo(Train train, Cargo cargo, Station station) {
         if (canReachBeforeExpiry(train, cargo)) {
             boardCargoToTrain(train, cargo, station);
         }
-    }
-
-    private void tryBoardRegularCargo(Train train, Cargo cargo, Station station) {
-        boardCargoToTrain(train, cargo, station);
     }
 
     private void boardCargoToTrain(Train train, Cargo cargo, Station station) {
@@ -444,62 +485,26 @@ public class TrainsController {
         return willTrainReachDestination(train, passenger.getDestStationId());
     }
 
-    private boolean shouldBoardCargo(Train train, Cargo cargo) {
-        return willTrainReachDestination(train, cargo.getDestStationId());
-    }
-
-    private void attemptBoardPassenger(Train train, Passenger passenger, Station station) {
-        if (train instanceof PassengerTrain) {
-            boardPassengerToPassengerTrain((PassengerTrain) train, passenger, station);
-        } else if (train instanceof BulletTrain) {
-            boardPassengerToBulletTrain((BulletTrain) train, passenger, station);
-        }
-    }
-
-    private void boardPassengerToPassengerTrain(PassengerTrain train, Passenger passenger, Station station) {
-        if (train.getPassengers().size() < train.getMaxPassengers()) {
-            train.addPassenger(passenger);
-            station.removePassenger(passenger.getId());
-        }
-    }
-
-    private void boardPassengerToBulletTrain(BulletTrain train, Passenger passenger, Station station) {
-        if (train.getPassengers().size() < train.getMaxPassengers()) {
-            train.addPassenger(passenger);
-            station.removePassenger(passenger.getId());
-        }
-    }
-
-    private void attemptBoardCargo(Train train, Cargo cargo, Station station) {
-        if (train instanceof CargoTrain) {
-            boardCargoToCargoTrain((CargoTrain) train, cargo, station);
-        } else if (train instanceof BulletTrain) {
-            boardCargoToBulletTrain((BulletTrain) train, cargo, station);
-        }
-    }
-
     private void updateTrainSpeed(Train train) {
-        if (train instanceof PassengerTrain) {
-            train.setSpeed(2.0);
-        } else if (train instanceof CargoTrain) {
-            CargoTrain ct = (CargoTrain) train;
-            int totalWeight = ct.getCurrentLoad();
-            double baseSpeed = 3.0;
-
-            double slowdown = totalWeight * 0.0001;
-            double newSpeed = baseSpeed * (1.0 - slowdown);
-
-            train.setSpeed(Math.max(0.1, newSpeed));
-        } else if (train instanceof BulletTrain) {
-            BulletTrain bt = (BulletTrain) train;
-            int totalWeight = bt.getCurrentLoad();
-            double baseSpeed = 5.0;
-
-            double slowdown = totalWeight * 0.0001;
-            double newSpeed = baseSpeed * (1.0 - slowdown);
-
-            train.setSpeed(Math.max(0.1, newSpeed));
+        if (!train.canBoardCargo()) {
+            train.setSpeed(PASSENGER_TRAIN_SPEED);
+            return;
         }
+
+        double baseSpeed;
+        if (train.getType().equals("CargoTrain")) {
+            baseSpeed = PASSENGER_TRAIN_SPEED;
+        } else if (train instanceof CargoTrain) {
+            baseSpeed = CARGO_TRAIN_SPEED;
+        } else {
+            baseSpeed = BULLET_TRAIN_SPEED;
+        }
+
+        int totalWeight = calculateTrainLoadWeight(train);
+        double slowdown = totalWeight * SLOWDOWN_RATE;
+        double newSpeed = baseSpeed * (1.0 - slowdown);
+
+        train.setSpeed(Math.max(0.1, newSpeed));
     }
 
     private void updateTrainRouteIndex(Train train) {
@@ -707,8 +712,21 @@ public class TrainsController {
     }
 
     private void applyMechanicRepair(Train train, Station station) {
-        // TODO: Implement mechanic repair logic
-        // This will be implemented in Task C
+        if (!train.isRepairTrain()) {
+            return;
+        }
+
+        for (Track track : tracks) {
+            if (track.connects(station.getId(), track.getOtherStation(station.getId()))) {
+                if (track.isBreakable()) {
+                    track.repair(MECHANIC_REPAIR_AMOUNT);
+
+                    if (track.getType() == TrackType.BROKEN && track.getDurability() > 0) {
+                        track.setType(TrackType.UNBROKEN);
+                    }
+                }
+            }
+        }
     }
 
     private void deterioratePerishables() {
@@ -809,12 +827,8 @@ public class TrainsController {
         station.addCargo(cargo);
     }
 
-    public void createTrack(String trackId, String fromStationId, String toStationId, boolean isBreakable) {
-        // Todo: Task ci
-    }
-
     public void createPassenger(String startStationId, String destStationId, String passengerId, boolean isMechanic) {
-        Passenger passenger = new Passenger(passengerId, startStationId, destStationId);
+        Passenger passenger = new Passenger(passengerId, startStationId, destStationId, isMechanic);
         Station station = findStationById(startStationId);
         station.addPassenger(passenger);
     }

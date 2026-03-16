@@ -6,6 +6,7 @@ import java.util.List;
 public class PassengerTrain extends Train {
     private List<Passenger> passengers;
     private int maxPassengers;
+    private static final int PASSENGER_WEIGHT = 70;
 
     public PassengerTrain(String id, String stationId, List<String> route,
             double speed, boolean isCyclical, double x, double y, int maxPassengers) {
@@ -21,7 +22,7 @@ public class PassengerTrain extends Train {
 
     @Override
     public int getCurrentLoad() {
-        return passengers.size();
+        return passengers.size() * PASSENGER_WEIGHT;
     }
 
     @Override
@@ -34,25 +35,74 @@ public class PassengerTrain extends Train {
         return new ArrayList<>();
     }
 
-    public int getMaxPassengers() {
+    @Override
+    public boolean canBoardPassenger() {
+        return true;
+    }
+
+    @Override
+    public boolean canBoardCargo() {
+        return false;
+    }
+
+    @Override
+    public boolean isRepairTrain() {
+        for (Passenger p : passengers) {
+            if (p.isMechanic())
+                return true;
+        }
+        return false;
+    }
+
+    @Override
+    public int getMaxPassengerCapacity() {
         return maxPassengers;
     }
 
-    public void addPassenger(Passenger passenger) {
+    @Override
+    public int getMaxCargoCapacity() {
+        return 0;
+    }
+
+    @Override
+    public void addPassenger(Passenger p) {
         if (passengers.size() < maxPassengers) {
-            passengers.add(passenger);
+            passengers.add(p);
         }
     }
 
-    public void removePassenger(Passenger passenger) {
-        passengers.remove(passenger);
+    @Override
+    public void addCargo(Cargo c) {
     }
 
+    @Override
+    public void removePassenger(Passenger p) {
+        passengers.remove(p);
+    }
+
+    @Override
+    public void removeCargo(Cargo c) {
+    }
+
+    @Override
     public void removePassenger(String passengerId) {
         passengers.removeIf(p -> p.getId().equals(passengerId));
     }
 
+    @Override
+    public void removeCargo(String cargoId) {
+    }
+
+    @Override
     public void removeArrivedPassengers(String stationId) {
         passengers.removeIf(p -> p.getDestStationId().equals(stationId));
+    }
+
+    @Override
+    public void removeArrivedCargo(String stationId) {
+    }
+
+    public int getMaxPassengers() {
+        return maxPassengers;
     }
 }

@@ -27,11 +27,10 @@ public abstract class Train {
         this.y = y;
     }
 
-    // Abstract methods that subclasses must implement
     public String getNextStation() {
         int nextIndex = calculateNextIndex();
         return getRoute().get(nextIndex);
-    };
+    }
 
     public abstract String getType();
 
@@ -41,6 +40,33 @@ public abstract class Train {
 
     public abstract List<Cargo> getCargo();
 
+    public abstract boolean canBoardPassenger();
+
+    public abstract boolean canBoardCargo();
+
+    public abstract boolean isRepairTrain();
+
+    public abstract int getMaxPassengerCapacity();
+
+    public abstract int getMaxCargoCapacity();
+
+    public abstract void addPassenger(Passenger p);
+
+    public abstract void addCargo(Cargo c);
+
+    public abstract void removePassenger(Passenger p);
+
+    public abstract void removeCargo(Cargo c);
+
+    public abstract void removePassenger(String passengerId);
+
+    public abstract void removeCargo(String cargoId);
+
+    public abstract void removeArrivedPassengers(String stationId);
+
+    public abstract void removeArrivedCargo(String stationId);
+
+    // Getters and setters
     public String getId() {
         return id;
     }

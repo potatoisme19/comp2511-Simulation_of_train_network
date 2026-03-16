@@ -36,29 +36,86 @@ public class CargoTrain extends Train {
         return new ArrayList<>(cargo);
     }
 
-    public int getMaxCargoWeight() {
+    @Override
+    public boolean canBoardPassenger() {
+        return false;
+    }
+
+    @Override
+    public boolean canBoardCargo() {
+        return true;
+    }
+
+    @Override
+    public boolean isRepairTrain() {
+        return false;
+    }
+
+    @Override
+    public int getMaxPassengerCapacity() {
+        return 0;
+    }
+
+    @Override
+    public int getMaxCargoCapacity() {
         return maxCargoWeight;
     }
 
-    public void addCargo(Cargo newCargo) {
-        if (currentCargoWeight + newCargo.getWeight() <= maxCargoWeight) {
-            cargo.add(newCargo);
-            currentCargoWeight += newCargo.getWeight();
+    @Override
+    public void addPassenger(Passenger p) {
+    }
+
+    @Override
+    public void addCargo(Cargo c) {
+        if (currentCargoWeight + c.getWeight() <= maxCargoWeight) {
+            cargo.add(c);
+            currentCargoWeight += c.getWeight();
         }
     }
 
-    public void removeCargo(Cargo cargoToRemove) {
-        if (cargo.remove(cargoToRemove)) {
-            currentCargoWeight -= cargoToRemove.getWeight();
+    @Override
+    public void removePassenger(Passenger p) {
+    }
+
+    @Override
+    public void removeCargo(Cargo c) {
+        if (cargo.remove(c)) {
+            currentCargoWeight -= c.getWeight();
         }
     }
 
+    @Override
+    public void removePassenger(String passengerId) {
+    }
+
+    @Override
     public void removeCargo(String cargoId) {
         cargo.removeIf(c -> c.getId().equals(cargoId));
+        currentCargoWeight = 0;
+        for (Cargo c : cargo) {
+            currentCargoWeight += c.getWeight();
+        }
     }
 
+    @Override
+    public void removeArrivedPassengers(String stationId) {
+    }
+
+    @Override
     public void removeArrivedCargo(String stationId) {
-        cargo.removeIf(c -> c.getDestStationId().equals(stationId));
+        List<Cargo> toRemove = new ArrayList<>();
+        for (Cargo c : cargo) {
+            if (c.getDestStationId().equals(stationId)) {
+                toRemove.add(c);
+            }
+        }
+        for (Cargo c : toRemove) {
+            removeCargo(c);
+        }
+    }
+
+    public int getMaxCargoWeight() {
+        return maxCargoWeight;
     }
 
     public boolean hasCapacityFor(Cargo newCargo) {

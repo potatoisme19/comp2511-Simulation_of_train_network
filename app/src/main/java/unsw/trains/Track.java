@@ -8,18 +8,30 @@ public class Track {
     private String toStationId;
     private TrackType type;
     private int durability;
-    private double distance;
+    private boolean isBreakable;
 
+    // Constructor for Task A (normal tracks)
     public Track(String id, String fromStationId, String toStationId) {
-        this(id, fromStationId, toStationId, TrackType.NORMAL, 10);
+        this(id, fromStationId, toStationId, TrackType.NORMAL, 10, false);
     }
 
-    public Track(String id, String fromStationId, String toStationId, TrackType type, int durability) {
+    // Constructor for Task C (breakable tracks)
+    public Track(String id, String fromStationId, String toStationId, boolean isBreakable) {
+        this(id, fromStationId, toStationId,
+                isBreakable ? TrackType.UNBROKEN : TrackType.NORMAL,
+                10,
+                isBreakable);
+    }
+
+    // Full constructor
+    public Track(String id, String fromStationId, String toStationId, TrackType type, int durability,
+            boolean isBreakable) {
         this.id = id;
         this.fromStationId = fromStationId;
         this.toStationId = toStationId;
         this.type = type;
         this.durability = durability;
+        this.isBreakable = isBreakable;
     }
 
     public String getId() {
@@ -42,12 +54,16 @@ public class Track {
         return durability;
     }
 
+    public boolean isBreakable() {
+        return isBreakable;
+    }
+
     public void setType(TrackType type) {
         this.type = type;
     }
 
     public void setDurability(int durability) {
-        this.durability = durability;
+        this.durability = Math.max(0, Math.min(10, durability));
     }
 
     public boolean connects(String stationId1, String stationId2) {
@@ -63,11 +79,15 @@ public class Track {
         return null;
     }
 
-    public void setDistance(double distance) {
-        this.distance = distance;
+    public void repair(int amount) {
+        if (isBreakable) {
+            durability = Math.min(10, durability + amount);
+        }
     }
 
-    public double getDistance() {
-        return distance;
+    public void damage(int amount) {
+        if (isBreakable) {
+            durability = Math.max(0, durability - amount);
+        }
     }
 }
