@@ -59,6 +59,11 @@ public class TrainsController {
         stations.add(station);
     }
 
+    public void createTrack(String trackId, String fromStationId, String toStationId) {
+        Track track = new Track(trackId, fromStationId, toStationId);
+        tracks.add(track);
+    }
+
     public void createTrack(String trackId, String fromStationId, String toStationId, boolean isBreakable) {
         Track track = new Track(trackId, fromStationId, toStationId, isBreakable);
         tracks.add(track);
