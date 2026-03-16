@@ -5,13 +5,14 @@ public class Cargo {
     private String startStationId;
     private String destStationId;
     private int weight;
+    private boolean isPerishable;
     private Integer minsTillPerish;
 
     public Cargo(String id, String startStationId, String destStationId, int weight) {
-        this(id, startStationId, destStationId, weight, null);
+        this(id, startStationId, destStationId, weight, 0);
     }
 
-    public Cargo(String id, String startStationId, String destStationId, int weight, Integer minsTillPerish) {
+    public Cargo(String id, String startStationId, String destStationId, int weight, int minsTillPerish) {
         this.id = id;
         this.startStationId = startStationId;
         this.destStationId = destStationId;
@@ -44,8 +45,12 @@ public class Cargo {
     }
 
     public void decrementPerishTime() {
-        if (minsTillPerish != null && minsTillPerish > 0) {
+        if (isPerishable && minsTillPerish > 0) {
             minsTillPerish--;
         }
+    }
+
+    public boolean hasExpired() {
+        return isPerishable && minsTillPerish <= 0;
     }
 }

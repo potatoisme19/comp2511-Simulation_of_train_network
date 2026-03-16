@@ -5,6 +5,7 @@ public class Passenger {
     private String startStationId;
     private String destStationId;
     private boolean isMechanic;
+    private static final int PASSENGER_WEIGHT = 70;
 
     public Passenger(String id, String startStationId, String destStationId) {
         this(id, startStationId, destStationId, false);
@@ -31,5 +32,9 @@ public class Passenger {
 
     public boolean isMechanic() {
         return isMechanic;
+    }
+
+    public int getWeight() {
+        return PASSENGER_WEIGHT;
     }
 }

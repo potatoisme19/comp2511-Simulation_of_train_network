@@ -9,6 +9,7 @@ public class BulletTrain extends Train {
     private int maxPassengers;
     private int maxCargoWeight;
     private int currentCargoWeight;
+    private static final int PASSENGER_WEIGHT = 70;
 
     public BulletTrain(String id, String stationId, List<String> route,
             double speed, boolean isCyclical, double x, double y, int maxPassengers) {
@@ -38,7 +39,7 @@ public class BulletTrain extends Train {
 
     @Override
     public int getCurrentLoad() {
-        return passengers.size() + currentCargoWeight; // Total load
+        return (passengers.size() * PASSENGER_WEIGHT) + currentCargoWeight;
     }
 
     @Override
