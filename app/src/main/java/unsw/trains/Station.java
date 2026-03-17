@@ -20,7 +20,7 @@ public abstract class Station {
         this.y = y;
         this.maxTrains = maxTrains;
         this.stoppedTrains = new ArrayList<>();
-        this.loads = new ArrayList<>(); // Now using Load list
+        this.loads = new ArrayList<>();
     }
 
     public String getId() {
@@ -64,9 +64,10 @@ public abstract class Station {
     public abstract boolean canLoadCargo();
 
     public void addLoad(Load load) {
-        if (load instanceof Passenger && canLoadPassengers()) {
-            loads.add(load);
-        } else if (load instanceof Cargo && canLoadCargo()) {
+        boolean canAccept = (load.getType().equals("Passenger") && canLoadPassengers())
+                || (load.getType().equals("Cargo") && canLoadCargo());
+
+        if (canAccept) {
             loads.add(load);
         }
     }
@@ -79,41 +80,15 @@ public abstract class Station {
         return new ArrayList<>(loads);
     }
 
-    public void addPassenger(Passenger passenger) {
-        if (canLoadPassengers()) {
-            loads.add(passenger);
-        }
-    }
-
-    public void removePassenger(String passengerId) {
-        if (canLoadPassengers()) {
-            loads.removeIf(l -> l instanceof Passenger && l.getId().equals(passengerId));
-        }
-    }
-
-    public List<Passenger> getPassengers() {
+    public List<Load> getPassengers() {
         return loads.stream()
-                .filter(l -> l instanceof Passenger)
-                .map(l -> (Passenger) l)
+                .filter(l -> l.getType().equals("Passenger"))
                 .collect(Collectors.toList());
     }
 
-    public void addCargo(Cargo cargoItem) {
-        if (canLoadCargo()) {
-            loads.add(cargoItem);
-        }
-    }
-
-    public void removeCargo(String cargoId) {
-        if (canLoadCargo()) {
-            loads.removeIf(l -> l instanceof Cargo && l.getId().equals(cargoId));
-        }
-    }
-
-    public List<Cargo> getCargo() {
+    public List<Load> getCargo() {
         return loads.stream()
-                .filter(l -> l instanceof Cargo)
-                .map(l -> (Cargo) l)
+                .filter(l -> l.getType().equals("Cargo") || l.getType().equals("PerishableCargo"))
                 .collect(Collectors.toList());
     }
 

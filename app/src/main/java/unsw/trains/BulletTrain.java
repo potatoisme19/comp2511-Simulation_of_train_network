@@ -67,59 +67,6 @@ public class BulletTrain extends Train {
     }
 
     @Override
-    public void removePassenger(Passenger p) {
-        passengers.remove(p);
-        super.removeLoad(p.getId());
-    }
-
-    @Override
-    public void removeCargo(Cargo c) {
-        if (cargo.remove(c)) {
-            super.removeLoad(c.getId());
-            currentCargoWeight -= c.getWeight();
-        }
-    }
-
-    @Override
-    public void removePassenger(String passengerId) {
-        passengers.removeIf(p -> p.getId().equals(passengerId));
-        for (Passenger p : new ArrayList<>(passengers)) {
-            if (p.getId().equals(passengerId)) {
-                removePassenger(p);
-                break;
-            }
-        }
-    }
-
-    @Override
-    public void removeCargo(String cargoId) {
-        for (Cargo c : new ArrayList<>(cargo)) {
-            if (c.getId().equals(cargoId)) {
-                removeCargo(c);
-                break;
-            }
-        }
-    }
-
-    @Override
-    public void removeArrivedPassengers(String stationId) {
-        passengers.removeIf(p -> p.getDestStationId().equals(stationId));
-    }
-
-    @Override
-    public void removeArrivedCargo(String stationId) {
-        List<Cargo> toRemove = new ArrayList<>();
-        for (Cargo c : cargo) {
-            if (c.getDestStationId().equals(stationId)) {
-                toRemove.add(c);
-            }
-        }
-        for (Cargo c : toRemove) {
-            removeCargo(c);
-        }
-    }
-
-    @Override
     public void updateSpeed() {
         double baseSpeed = BULLET_TRAIN_SPEED;
         int totalWeight = getCurrentLoad();
@@ -146,6 +93,39 @@ public class BulletTrain extends Train {
                 currentCargoWeight += c.getWeight();
             }
         }
+    }
+
+    @Override
+    public void removeLoad(String loadId) {
+        for (Load load : getLoads()) {
+            if (load.getId().equals(loadId)) {
+                if (load instanceof Cargo) {
+                    currentCargoWeight -= ((Cargo) load).getWeight();
+                    cargo.remove(load);
+                } else if (load instanceof Passenger) {
+                    passengers.remove(load);
+                }
+                break;
+            }
+        }
+        super.removeLoad(loadId);
+    }
+
+    @Override
+    public void unloadAtStation(String stationId) {
+        List<Load> toRemove = new ArrayList<>();
+        for (Load load : getLoads()) {
+            if (load.getDestStationId().equals(stationId)) {
+                toRemove.add(load);
+                if (load instanceof Cargo) {
+                    currentCargoWeight -= ((Cargo) load).getWeight();
+                    cargo.remove(load);
+                } else if (load instanceof Passenger) {
+                    passengers.remove(load);
+                }
+            }
+        }
+        super.unloadAtStation(stationId);
     }
 
     public int getMaxPassengers() {

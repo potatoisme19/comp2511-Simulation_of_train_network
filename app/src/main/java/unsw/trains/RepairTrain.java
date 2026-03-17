@@ -80,33 +80,6 @@ public class RepairTrain extends Train {
     }
 
     @Override
-    public void removePassenger(Passenger p) {
-        passengers.remove(p);
-    }
-
-    @Override
-    public void removeCargo(Cargo c) {
-    }
-
-    @Override
-    public void removePassenger(String passengerId) {
-        passengers.removeIf(p -> p.getId().equals(passengerId));
-    }
-
-    @Override
-    public void removeCargo(String cargoId) {
-    }
-
-    @Override
-    public void removeArrivedPassengers(String stationId) {
-        passengers.removeIf(p -> p.getDestStationId().equals(stationId));
-    }
-
-    @Override
-    public void removeArrivedCargo(String stationId) {
-    }
-
-    @Override
     public void updateSpeed() {
         setSpeed(REPAIR_TRAIN_SPEED);
     }

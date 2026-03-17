@@ -627,13 +627,13 @@ public class TrainsController {
     public void createPassenger(String startStationId, String destStationId, String passengerId) {
         Passenger passenger = new Passenger(passengerId, startStationId, destStationId);
         Station station = findStationById(startStationId);
-        station.addPassenger(passenger);
+        station.addLoad(passenger);
     }
 
     public void createCargo(String startStationId, String destStationId, String cargoId, int weight) {
         Cargo cargo = new Cargo(cargoId, startStationId, destStationId, weight);
         Station station = findStationById(startStationId);
-        station.addCargo(cargo);
+        station.addLoad(cargo);
     }
 
     public void createPerishableCargo(String startStationId, String destStationId, String cargoId, int weight,
@@ -641,12 +641,12 @@ public class TrainsController {
         Cargo cargo = new Cargo(cargoId, startStationId, destStationId, weight, minsTillPerish);
 
         Station station = findStationById(startStationId);
-        station.addCargo(cargo);
+        station.addLoad(cargo);
     }
 
     public void createPassenger(String startStationId, String destStationId, String passengerId, boolean isMechanic) {
         Passenger passenger = new Passenger(passengerId, startStationId, destStationId, isMechanic);
         Station station = findStationById(startStationId);
-        station.addPassenger(passenger);
+        station.addLoad(passenger);
     }
 }

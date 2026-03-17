@@ -1,7 +1,5 @@
 package unsw.trains;
 
-import java.util.List;
-
 public class PassengerStation extends Station {
 
     public PassengerStation(String id, double x, double y) {
@@ -16,10 +14,5 @@ public class PassengerStation extends Station {
     @Override
     public boolean canLoadCargo() {
         return false;
-    }
-
-    @Override
-    public List<Cargo> getCargo() {
-        return new java.util.ArrayList<>();
     }
 }

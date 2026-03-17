@@ -82,10 +82,6 @@ public abstract class Train {
         loads.add(load);
     }
 
-    public void removeLoad(String loadId) {
-        loads.removeIf(l -> l.getId().equals(loadId));
-    }
-
     public List<Load> getLoads() {
         return new ArrayList<>(loads);
     }
@@ -120,28 +116,12 @@ public abstract class Train {
         }
     }
 
-    public void removePassenger(Passenger p) {
-        loads.remove(p);
+    public void removeLoad(String loadId) {
+        loads.removeIf(l -> l.getId().equals(loadId));
     }
 
-    public void removeCargo(Cargo c) {
-        loads.remove(c);
-    }
-
-    public void removePassenger(String passengerId) {
-        loads.removeIf(l -> l instanceof Passenger && l.getId().equals(passengerId));
-    }
-
-    public void removeCargo(String cargoId) {
-        loads.removeIf(l -> l instanceof Cargo && l.getId().equals(cargoId));
-    }
-
-    public void removeArrivedPassengers(String stationId) {
-        loads.removeIf(l -> l instanceof Passenger && l.getDestStationId().equals(stationId));
-    }
-
-    public void removeArrivedCargo(String stationId) {
-        loads.removeIf(l -> l instanceof Cargo && l.getDestStationId().equals(stationId));
+    public void unloadAtStation(String stationId) {
+        loads.removeIf(l -> l.getDestStationId().equals(stationId));
     }
 
     public void tick() {
@@ -156,11 +136,6 @@ public abstract class Train {
             loads.removeAll(expired);
             updateSpeed();
         }
-    }
-
-    public void unloadAtStation(String stationId) {
-        removeArrivedPassengers(stationId);
-        removeArrivedCargo(stationId);
     }
 
     public boolean canCarry(Load load) {

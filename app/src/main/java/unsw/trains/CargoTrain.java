@@ -83,45 +83,26 @@ public class CargoTrain extends Train {
     }
 
     @Override
-    public void removePassenger(Passenger p) {
-    }
-
-    @Override
-    public void removeCargo(Cargo c) {
-        if (cargo.remove(c)) {
-            currentCargoWeight -= c.getWeight();
-            super.removeLoad(c.getId());
-        }
-    }
-
-    @Override
-    public void removePassenger(String passengerId) {
-    }
-
-    @Override
-    public void removeCargo(String cargoId) {
-        cargo.removeIf(c -> c.getId().equals(cargoId));
-        currentCargoWeight = 0;
-        for (Cargo c : cargo) {
-            currentCargoWeight += c.getWeight();
-        }
-    }
-
-    @Override
-    public void removeArrivedPassengers(String stationId) {
-    }
-
-    @Override
-    public void removeArrivedCargo(String stationId) {
-        List<Cargo> toRemove = new ArrayList<>();
-        for (Cargo c : cargo) {
-            if (c.getDestStationId().equals(stationId)) {
-                toRemove.add(c);
+    public void removeLoad(String loadId) {
+        for (Load load : getLoads()) {
+            if (load.getId().equals(loadId) && load.getType().equals("Cargo")) {
+                Cargo c = (Cargo) load;
+                currentCargoWeight -= c.getWeight();
+                break;
             }
         }
-        for (Cargo c : toRemove) {
-            removeCargo(c);
+        super.removeLoad(loadId);
+    }
+
+    @Override
+    public void unloadAtStation(String stationId) {
+        for (Load load : getLoads()) {
+            if (load.getDestStationId().equals(stationId) && load.getType().equals("Cargo")) {
+                Cargo c = (Cargo) load;
+                currentCargoWeight -= c.getWeight();
+            }
         }
+        super.unloadAtStation(stationId);
     }
 
     @Override
