@@ -28,8 +28,7 @@ public class BulletTrain extends Train {
 
     @Override
     public int getCurrentLoad() {
-        int passengerWeight = passengers.size() * 70;
-        return passengerWeight + currentCargoWeight;
+        return super.getCurrentLoad();
     }
 
     @Override
@@ -54,10 +53,6 @@ public class BulletTrain extends Train {
 
     @Override
     public boolean isRepairTrain() {
-        for (Passenger p : passengers) {
-            if (p.isMechanic())
-                return true;
-        }
         return false;
     }
 
@@ -72,28 +67,15 @@ public class BulletTrain extends Train {
     }
 
     @Override
-    public void addPassenger(Passenger p) {
-        if (passengers.size() < maxPassengers) {
-            passengers.add(p);
-        }
-    }
-
-    @Override
-    public void addCargo(Cargo c) {
-        if (currentCargoWeight + c.getWeight() <= maxCargoWeight) {
-            cargo.add(c);
-            currentCargoWeight += c.getWeight();
-        }
-    }
-
-    @Override
     public void removePassenger(Passenger p) {
         passengers.remove(p);
+        super.removeLoad(p.getId());
     }
 
     @Override
     public void removeCargo(Cargo c) {
         if (cargo.remove(c)) {
+            super.removeLoad(c.getId());
             currentCargoWeight -= c.getWeight();
         }
     }
@@ -101,14 +83,21 @@ public class BulletTrain extends Train {
     @Override
     public void removePassenger(String passengerId) {
         passengers.removeIf(p -> p.getId().equals(passengerId));
+        for (Passenger p : new ArrayList<>(passengers)) {
+            if (p.getId().equals(passengerId)) {
+                removePassenger(p);
+                break;
+            }
+        }
     }
 
     @Override
     public void removeCargo(String cargoId) {
-        cargo.removeIf(c -> c.getId().equals(cargoId));
-        currentCargoWeight = 0;
-        for (Cargo c : cargo) {
-            currentCargoWeight += c.getWeight();
+        for (Cargo c : new ArrayList<>(cargo)) {
+            if (c.getId().equals(cargoId)) {
+                removeCargo(c);
+                break;
+            }
         }
     }
 
@@ -127,6 +116,35 @@ public class BulletTrain extends Train {
         }
         for (Cargo c : toRemove) {
             removeCargo(c);
+        }
+    }
+
+    @Override
+    public void updateSpeed() {
+        double baseSpeed = BULLET_TRAIN_SPEED;
+        int totalWeight = getCurrentLoad();
+        double slowdown = totalWeight * SLOWDOWN_RATE;
+        double newSpeed = baseSpeed * (1.0 - slowdown);
+
+        setSpeed(Math.max(0.1, newSpeed));
+    }
+
+    @Override
+    public void addLoad(Load load) {
+        String type = load.getType();
+        if (type.equals("Passenger") || type.equals("Mechanic")) {
+            Passenger p = (Passenger) load;
+            if (passengers.size() < maxPassengers) {
+                passengers.add(p);
+                super.addLoad(load);
+            }
+        } else if (type.equals("Cargo") || type.equals("PerishableCargo")) {
+            Cargo c = (Cargo) load;
+            if (currentCargoWeight + c.getWeight() <= maxCargoWeight) {
+                cargo.add(c);
+                super.addLoad(load);
+                currentCargoWeight += c.getWeight();
+            }
         }
     }
 

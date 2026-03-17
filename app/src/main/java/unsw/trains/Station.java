@@ -2,6 +2,7 @@ package unsw.trains;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public abstract class Station {
     private String id;
@@ -10,8 +11,7 @@ public abstract class Station {
     private double y;
     private int maxTrains;
     private List<String> stoppedTrains;
-    private List<Passenger> passengers;
-    private List<Cargo> cargo;
+    private List<Load> loads;
 
     public Station(String id, String type, double x, double y, int maxTrains) {
         this.id = id;
@@ -20,8 +20,7 @@ public abstract class Station {
         this.y = y;
         this.maxTrains = maxTrains;
         this.stoppedTrains = new ArrayList<>();
-        this.passengers = new ArrayList<>();
-        this.cargo = new ArrayList<>();
+        this.loads = new ArrayList<>(); // Now using Load list
     }
 
     public String getId() {
@@ -64,35 +63,68 @@ public abstract class Station {
 
     public abstract boolean canLoadCargo();
 
+    public void addLoad(Load load) {
+        if (load instanceof Passenger && canLoadPassengers()) {
+            loads.add(load);
+        } else if (load instanceof Cargo && canLoadCargo()) {
+            loads.add(load);
+        }
+    }
+
+    public void removeLoad(String loadId) {
+        loads.removeIf(l -> l.getId().equals(loadId));
+    }
+
+    public List<Load> getLoads() {
+        return new ArrayList<>(loads);
+    }
+
     public void addPassenger(Passenger passenger) {
         if (canLoadPassengers()) {
-            passengers.add(passenger);
+            loads.add(passenger);
         }
     }
 
     public void removePassenger(String passengerId) {
         if (canLoadPassengers()) {
-            passengers.removeIf(p -> p.getId().equals(passengerId));
+            loads.removeIf(l -> l instanceof Passenger && l.getId().equals(passengerId));
         }
     }
 
     public List<Passenger> getPassengers() {
-        return new ArrayList<>(passengers);
+        return loads.stream()
+                .filter(l -> l instanceof Passenger)
+                .map(l -> (Passenger) l)
+                .collect(Collectors.toList());
     }
 
     public void addCargo(Cargo cargoItem) {
         if (canLoadCargo()) {
-            cargo.add(cargoItem);
+            loads.add(cargoItem);
         }
     }
 
     public void removeCargo(String cargoId) {
         if (canLoadCargo()) {
-            cargo.removeIf(c -> c.getId().equals(cargoId));
+            loads.removeIf(l -> l instanceof Cargo && l.getId().equals(cargoId));
         }
     }
 
     public List<Cargo> getCargo() {
-        return new ArrayList<>(cargo);
+        return loads.stream()
+                .filter(l -> l instanceof Cargo)
+                .map(l -> (Cargo) l)
+                .collect(Collectors.toList());
+    }
+
+    public void tick() {
+        List<Load> expired = new ArrayList<>();
+        for (Load load : loads) {
+            load.tick();
+            if (load.hasExpired()) {
+                expired.add(load);
+            }
+        }
+        loads.removeAll(expired);
     }
 }

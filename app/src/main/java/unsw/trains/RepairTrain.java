@@ -64,6 +64,14 @@ public class RepairTrain extends Train {
     public void addPassenger(Passenger p) {
         if (passengers.size() < maxPassengers) {
             passengers.add(p);
+            super.addLoad(p);
+        }
+    }
+
+    @Override
+    public void addLoad(Load load) {
+        if (load.getType().equals("Passenger") || load.getType().equals("Mechanic")) {
+            addPassenger((Passenger) load);
         }
     }
 
@@ -98,14 +106,9 @@ public class RepairTrain extends Train {
     public void removeArrivedCargo(String stationId) {
     }
 
-    public int countMechanics() {
-        int count = 0;
-        for (Passenger p : passengers) {
-            if (p.isMechanic()) {
-                count++;
-            }
-        }
-        return count;
+    @Override
+    public void updateSpeed() {
+        setSpeed(REPAIR_TRAIN_SPEED);
     }
 
     public int getMaxPassengers() {

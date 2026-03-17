@@ -47,10 +47,6 @@ public class PassengerTrain extends Train {
 
     @Override
     public boolean isRepairTrain() {
-        for (Passenger p : passengers) {
-            if (p.isMechanic())
-                return true;
-        }
         return false;
     }
 
@@ -68,6 +64,14 @@ public class PassengerTrain extends Train {
     public void addPassenger(Passenger p) {
         if (passengers.size() < maxPassengers) {
             passengers.add(p);
+            super.addLoad(p);
+        }
+    }
+
+    @Override
+    public void addLoad(Load load) {
+        if (load.getType().equals("Passenger") || load.getType().equals("Mechanic")) {
+            addPassenger((Passenger) load);
         }
     }
 
@@ -77,7 +81,9 @@ public class PassengerTrain extends Train {
 
     @Override
     public void removePassenger(Passenger p) {
-        passengers.remove(p);
+        if (passengers.remove(p)) {
+            super.removeLoad(p.getId());
+        }
     }
 
     @Override
@@ -86,7 +92,12 @@ public class PassengerTrain extends Train {
 
     @Override
     public void removePassenger(String passengerId) {
-        passengers.removeIf(p -> p.getId().equals(passengerId));
+        for (Passenger p : new ArrayList<>(passengers)) {
+            if (p.getId().equals(passengerId)) {
+                removePassenger(p);
+                break;
+            }
+        }
     }
 
     @Override
@@ -100,6 +111,15 @@ public class PassengerTrain extends Train {
 
     @Override
     public void removeArrivedCargo(String stationId) {
+    }
+
+    @Override
+    public void updateSpeed() {
+        double baseSpeed = PASSENGER_TRAIN_SPEED;
+        int totalWeight = getCurrentLoad();
+        double slowdown = totalWeight * SLOWDOWN_RATE;
+        double newSpeed = baseSpeed * (1.0 - slowdown);
+        setSpeed(Math.max(0.1, newSpeed));
     }
 
     public int getMaxPassengers() {

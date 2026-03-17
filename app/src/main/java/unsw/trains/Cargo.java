@@ -1,56 +1,56 @@
 package unsw.trains;
 
-public class Cargo {
-    private String id;
-    private String startStationId;
-    private String destStationId;
+public class Cargo extends Load {
     private int weight;
+    private int minsTillPerish;
     private boolean isPerishable;
-    private Integer minsTillPerish;
 
     public Cargo(String id, String startStationId, String destStationId, int weight) {
-        this(id, startStationId, destStationId, weight, 0);
+        super(id, startStationId, destStationId);
+        this.weight = weight;
+        this.isPerishable = false;
+        this.minsTillPerish = Integer.MAX_VALUE;
     }
 
     public Cargo(String id, String startStationId, String destStationId, int weight, int minsTillPerish) {
-        this.id = id;
-        this.startStationId = startStationId;
-        this.destStationId = destStationId;
+        super(id, startStationId, destStationId);
         this.weight = weight;
+        this.isPerishable = true;
         this.minsTillPerish = minsTillPerish;
     }
 
-    public String getId() {
-        return id;
+    @Override
+    public String getType() {
+        if (isPerishable) {
+            return "PerishableCargo";
+        } else {
+            return "Cargo";
+        }
     }
 
-    public String getStartStationId() {
-        return startStationId;
-    }
-
-    public String getDestStationId() {
-        return destStationId;
-    }
-
+    @Override
     public int getWeight() {
         return weight;
     }
 
+    @Override
     public boolean isPerishable() {
-        return minsTillPerish != null && minsTillPerish > 0;
+        return isPerishable;
     }
 
-    public Integer getMinsTillPerish() {
-        return minsTillPerish;
-    }
-
-    public void decrementPerishTime() {
-        if (isPerishable && minsTillPerish > 0) {
+    @Override
+    public void tick() {
+        if (isPerishable) {
             minsTillPerish--;
         }
     }
 
+    @Override
     public boolean hasExpired() {
         return isPerishable && minsTillPerish <= 0;
+    }
+
+    public int getMinsTillPerish() {
+        return minsTillPerish;
     }
 }

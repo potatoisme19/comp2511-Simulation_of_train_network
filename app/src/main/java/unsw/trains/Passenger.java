@@ -1,40 +1,48 @@
 package unsw.trains;
 
-public class Passenger {
-    private String id;
-    private String startStationId;
-    private String destStationId;
-    private boolean isMechanic;
+public class Passenger extends Load {
     private static final int PASSENGER_WEIGHT = 70;
+    private boolean isMechanic;
 
     public Passenger(String id, String startStationId, String destStationId) {
-        this(id, startStationId, destStationId, false);
+        super(id, startStationId, destStationId);
+        this.isMechanic = false;
     }
 
     public Passenger(String id, String startStationId, String destStationId, boolean isMechanic) {
-        this.id = id;
-        this.startStationId = startStationId;
-        this.destStationId = destStationId;
+        super(id, startStationId, destStationId);
         this.isMechanic = isMechanic;
     }
 
-    public String getId() {
-        return id;
+    @Override
+    public String getType() {
+        if (isMechanic) {
+            return "Mechanic";
+        } else {
+            return "Passenger";
+        }
     }
 
-    public String getStartStationId() {
-        return startStationId;
+    @Override
+    public int getWeight() {
+        return PASSENGER_WEIGHT;
     }
 
-    public String getDestStationId() {
-        return destStationId;
+    @Override
+    public boolean isPerishable() {
+        return false;
+    }
+
+    @Override
+    public void tick() {
+    }
+
+    @Override
+    public boolean hasExpired() {
+        return false;
     }
 
     public boolean isMechanic() {
         return isMechanic;
-    }
-
-    public int getWeight() {
-        return PASSENGER_WEIGHT;
     }
 }

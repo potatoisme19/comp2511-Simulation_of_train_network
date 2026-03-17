@@ -22,9 +22,6 @@ public class TrainsController {
     private static final double CARGO_TRAIN_SPEED = 3.0;
     private static final double BULLET_TRAIN_SPEED = 5.0;
 
-    private static final double SLOWDOWN_RATE = 0.0001;
-
-    private static final int MECHANIC_REPAIR_AMOUNT = 5;
     private static final int AUTO_REPAIR_AMOUNT = 1;
 
     private static final int WEIGHT_DIVISOR = 1000;
@@ -148,7 +145,8 @@ public class TrainsController {
     public TrainInfoResponse getTrainInfo(String trainId) {
         for (Train t : trains) {
             if (t.getId().equals(trainId)) {
-                List<LoadInfoResponse> loads = combineLoads(t.getPassengers(), t.getCargo());
+                // Use getLoads() instead of separate passenger/cargo methods
+                List<LoadInfoResponse> loads = loadsToLoadInfo(t.getLoads());
 
                 return new TrainInfoResponse(
                         t.getId(),
@@ -164,7 +162,7 @@ public class TrainsController {
     public StationInfoResponse getStationInfo(String stationId) {
         for (Station s : stations) {
             if (s.getId().equals(stationId)) {
-                List<LoadInfoResponse> loads = combineLoads(s.getPassengers(), s.getCargo());
+                List<LoadInfoResponse> loads = loadsToLoadInfo(s.getLoads());
                 List<TrainInfoResponse> trainsAtStation = getTrainInfos(s.getStoppedTrains());
 
                 return new StationInfoResponse(
@@ -176,6 +174,14 @@ public class TrainsController {
             }
         }
         return null;
+    }
+
+    private List<LoadInfoResponse> loadsToLoadInfo(List<Load> loads) {
+        List<LoadInfoResponse> result = new ArrayList<>();
+        for (Load load : loads) {
+            result.add(new LoadInfoResponse(load.getId(), load.getType()));
+        }
+        return result;
     }
 
     public TrackInfoResponse getTrackInfo(String trackId) {
@@ -191,45 +197,6 @@ public class TrainsController {
             }
         }
         return null;
-    }
-
-    private String getPassengerType(Passenger p) {
-        if (p.isMechanic()) {
-            return "Mechanic";
-        } else {
-            return "Passenger";
-        }
-    }
-
-    private String getCargoType(Cargo c) {
-        if (c.isPerishable()) {
-            return "PerishableCargo";
-        } else {
-            return "Cargo";
-        }
-    }
-
-    private List<LoadInfoResponse> passengersToLoads(List<Passenger> passengers) {
-        List<LoadInfoResponse> loads = new ArrayList<>();
-        for (Passenger p : passengers) {
-            loads.add(new LoadInfoResponse(p.getId(), getPassengerType(p)));
-        }
-        return loads;
-    }
-
-    private List<LoadInfoResponse> cargoToLoads(List<Cargo> cargoList) {
-        List<LoadInfoResponse> loads = new ArrayList<>();
-        for (Cargo c : cargoList) {
-            loads.add(new LoadInfoResponse(c.getId(), getCargoType(c)));
-        }
-        return loads;
-    }
-
-    private List<LoadInfoResponse> combineLoads(List<Passenger> passengers, List<Cargo> cargoList) {
-        List<LoadInfoResponse> loads = new ArrayList<>();
-        loads.addAll(passengersToLoads(passengers));
-        loads.addAll(cargoToLoads(cargoList));
-        return loads;
     }
 
     private List<TrainInfoResponse> getTrainInfos(List<String> trainIds) {
@@ -261,22 +228,102 @@ public class TrainsController {
         Station nextStation = findStationById(nextStationId);
         Position destPos = new Position(nextStation.getX(), nextStation.getY());
 
+        String departureStationId = train.getCurrentStation();
+
+        if (departureStationId != null && train.getJourneyDepartureStation() == null) {
+            train.setJourneyDepartureStation(departureStationId);
+        }
+
         handleDeparture(train);
 
         if (isTrackBroken(train, nextStationId)) {
+            train.setJourneyDepartureStation(null);
             return;
         }
 
+        if (departureStationId != null) {
+            Track currentTrack = findTrackBetween(departureStationId, nextStationId);
+            if (currentTrack != null && currentTrack.isBreakable()
+                    && currentTrack.getType() == TrackType.BROKEN && train.isRepairTrain()) {
+                applyRepairDuringMovement(train, currentTrack);
+            }
+        }
+
         if (currentPos.isInBound(destPos, train.getSpeed())) {
-            handleArrival(train, nextStation, currentPos, destPos);
+            String journeyDeparture = train.getJourneyDepartureStation();
+            handleArrival(train, nextStation, currentPos, destPos, journeyDeparture);
+            train.setJourneyDepartureStation(null);
         } else {
             moveTrainPartway(train, currentPos, destPos);
         }
     }
 
+    private void applyRepairDuringMovement(Train train, Track track) {
+        if (!train.isRepairTrain() || !track.isBreakable() || track.getType() != TrackType.BROKEN) {
+            return;
+        }
+
+        RepairTrain repairTrain = (RepairTrain) train;
+        int mechanicCount = repairTrain.countMechanics();
+
+        // Repair rate = auto repair (1) + (mechanics * 2)
+        int repairRate = AUTO_REPAIR_AMOUNT + (mechanicCount * MECHANIC_REPAIR_BONUS);
+
+        // Apply repair
+        int newDurability = Math.min(10, track.getDurability() + repairRate);
+        track.setDurability(newDurability);
+
+        // If repaired above 0, update type
+        if (newDurability > 0 && track.getType() == TrackType.BROKEN) {
+            track.setType(TrackType.UNBROKEN);
+        }
+    }
+
+    private void handleArrival(Train train, Station nextStation, Position currentPos, Position destPos,
+            String departureStationId) {
+        train.setPosition(destPos.getX(), destPos.getY());
+
+        if (nextStation.canStopTrain()) {
+            completeArrival(train, nextStation, departureStationId);
+        } else {
+            train.setPosition(currentPos.getX(), currentPos.getY());
+        }
+    }
+
+    private void completeArrival(Train train, Station station, String departureStationId) {
+        String newStationId = station.getId();
+
+        train.setCurrentStation(newStationId);
+        station.addTrain(train.getId());
+
+        if (departureStationId != null) {
+            Station oldStation = findStationById(departureStationId);
+            if (oldStation != null) {
+                oldStation.removeTrain(train.getId());
+            }
+        }
+
+        updateTrainRouteIndex(train);
+
+        Track track = null;
+        if (departureStationId != null) {
+            track = findTrackBetween(departureStationId, newStationId);
+        }
+
+        updateTrackDurability(track, train);
+        unloadLoadsFromTrain(train, station);
+        updateTrainSpeed(train);
+    }
+
     private boolean isTrackBroken(Train train, String nextStationId) {
         String currentStationId = train.getCurrentStation();
+        if (currentStationId == null)
+            return false;
+
         Track track = findTrackBetween(currentStationId, nextStationId);
+        if (track == null)
+            return false;
+
         if (track.getType() == TrackType.BROKEN) {
             return !train.isRepairTrain();
         }
@@ -284,6 +331,7 @@ public class TrainsController {
     }
 
     private void updateTrackDurability(Track track, Train train) {
+
         if (track == null || !track.isBreakable()) {
             return;
         }
@@ -294,22 +342,15 @@ public class TrainsController {
 
         int totalWeight = calculateTrainLoadWeight(train);
         int damage = 1 + (int) Math.ceil(totalWeight / (double) WEIGHT_DIVISOR);
-
         track.damage(damage);
     }
 
     private int calculateTrainLoadWeight(Train train) {
-        int totalWeight = 0;
-
-        for (Passenger p : train.getPassengers()) {
-            totalWeight += p.getWeight();
-        }
-
-        for (Cargo c : train.getCargo()) {
-            totalWeight += c.getWeight();
-        }
-
-        return totalWeight;
+        return train
+                .getLoads()
+                .stream()
+                .mapToInt(Load::getWeight)
+                .sum();
     }
 
     private void updateTrackStatus(Track track) {
@@ -319,18 +360,36 @@ public class TrainsController {
 
         if (track.getDurability() <= 0) {
             track.setType(TrackType.BROKEN);
-        } else {
+        } else if (track.getDurability() >= 10) {
             track.setType(TrackType.UNBROKEN);
         }
     }
 
     private void updateAllTrackStatuses() {
+
+        // Step 1: Store tracks that are BROKEN *before* updating status
+        List<Track> previouslyBrokenTracks = new ArrayList<>();
+        for (Track track : tracks) {
+            if (track.isBreakable() && track.getType() == TrackType.BROKEN) {
+                previouslyBrokenTracks.add(track);
+            }
+        }
+
+        // Step 2: Update track status based on current durability
         for (Track track : tracks) {
             updateTrackStatus(track);
+        }
 
-            if (track.getType() == TrackType.BROKEN && track.isBreakable()) {
+        // Step 3: Repair tracks that were broken BEFORE this tick
+        for (Track track : previouslyBrokenTracks) {
+            if (track.isBreakable()) {
                 int repairRate = calculateRepairRateForTrack(track);
+
                 track.repair(repairRate);
+
+                if (track.getDurability() > 10) {
+                    track.setDurability(10);
+                }
 
                 if (track.getDurability() > 0) {
                     track.setType(TrackType.UNBROKEN);
@@ -341,6 +400,7 @@ public class TrainsController {
 
     private int calculateRepairRateForTrack(Track track) {
         int repairRate = AUTO_REPAIR_AMOUNT;
+
         for (Train train : trains) {
             if (train.isRepairTrain() && isTrainOnTrack(train, track)) {
                 RepairTrain repairTrain = (RepairTrain) train;
@@ -348,54 +408,34 @@ public class TrainsController {
                 repairRate += mechanicCount * MECHANIC_REPAIR_BONUS;
             }
         }
+
         return repairRate;
     }
 
     private boolean isTrainOnTrack(Train train, Track track) {
         String currentStation = train.getCurrentStation();
         String nextStation = train.getNextStation();
-        return (currentStation == null && track.connects(currentStation, nextStation));
+        String journeyDeparture = train.getJourneyDepartureStation();
+
+        if (journeyDeparture != null && nextStation != null) {
+            return track.connects(journeyDeparture, nextStation);
+        }
+        if (currentStation != null && nextStation != null) {
+            return track.connects(currentStation, nextStation);
+        }
+        return false;
     }
 
     private void handleDeparture(Train train) {
         String currentStationId = train.getCurrentStation();
+
         if (currentStationId != null) {
             Station currentStation = findStationById(currentStationId);
             boardLoadsToTrain(train, currentStation);
             updateTrainSpeed(train);
-        }
-    }
-
-    private void handleArrival(Train train, Station nextStation, Position currentPos, Position destPos) {
-        train.setPosition(destPos.getX(), destPos.getY());
-
-        if (nextStation.canStopTrain()) {
-            completeArrival(train, nextStation);
         } else {
-            train.setPosition(currentPos.getX(), currentPos.getY());
+            return;
         }
-    }
-
-    private void completeArrival(Train train, Station station) {
-        String currentStationId = train.getCurrentStation();
-        String newStationId = station.getId();
-
-        train.setCurrentStation(newStationId);
-        station.addTrain(train.getId());
-
-        if (currentStationId != null) {
-            Station oldStation = findStationById(currentStationId);
-            oldStation.removeTrain(train.getId());
-        }
-
-        updateTrainRouteIndex(train);
-
-        Track track = findTrackBetween(currentStationId, newStationId);
-        updateTrackDurability(track, train);
-
-        unloadLoadsFromTrain(train, station);
-
-        applyMechanicRepair(train, station);
     }
 
     private Track findTrackBetween(String stationId1, String stationId2) {
@@ -419,124 +459,27 @@ public class TrainsController {
         if (station == null)
             return;
 
-        boardPassengersToTrain(train, station);
-        boardCargoToTrain(train, station);
-    }
+        for (Load load : station.getLoads()) {
+            if (!train.canCarry(load))
+                continue;
 
-    private void boardPassengersToTrain(Train train, Station station) {
-        if (!train.canBoardPassenger()) {
-            return;
-        }
+            if (!train.willReachDestination(load.getDestStationId()))
+                continue;
 
-        for (Passenger passenger : station.getPassengers()) {
-            if (shouldBoardPassenger(train, passenger)) {
-                if (hasSpaceForPassenger(train)) {
-                    train.addPassenger(passenger);
-                    station.removePassenger(passenger.getId());
+            if (load instanceof Cargo) {
+                Cargo cargo = (Cargo) load;
+                if (cargo.isPerishable() && !canReachBeforeExpiry(train, cargo)) {
+                    continue;
                 }
             }
+
+            train.addLoad(load);
+            station.removeLoad(load.getId());
         }
-    }
-
-    private boolean hasSpaceForPassenger(Train train) {
-        return train.getPassengers().size() < train.getMaxPassengerCapacity();
-    }
-
-    private void boardCargoToTrain(Train train, Station station) {
-        if (!train.canBoardCargo()) {
-            return;
-        }
-
-        List<Cargo> boardableCargo = getBoardableCargoAtStation(train, station);
-
-        for (Cargo cargo : boardableCargo) {
-            if (canTrainAcceptCargo(train, cargo)) {
-                if (cargo.isPerishable()) {
-                    tryBoardPerishableCargo(train, cargo, station);
-                } else {
-                    boardCargo(train, cargo, station);
-                }
-            }
-        }
-    }
-
-    private boolean canTrainAcceptCargo(Train train, Cargo cargo) {
-        return train.getCurrentLoad() + cargo.getWeight() <= train.getMaxCargoCapacity();
-    }
-
-    private void boardCargo(Train train, Cargo cargo, Station station) {
-        train.addCargo(cargo); // Using specific method instead of addLoad
-        station.removeCargo(cargo.getId());
-    }
-
-    private List<Cargo> getBoardableCargoAtStation(Train train, Station station) {
-        List<Cargo> boardableCargo = new ArrayList<>();
-
-        for (Cargo cargo : station.getCargo()) {
-            if (willTrainReachDestination(train, cargo.getDestStationId())) {
-                boardableCargo.add(cargo);
-            }
-        }
-
-        return boardableCargo;
-    }
-
-    private void tryBoardPerishableCargo(Train train, Cargo cargo, Station station) {
-        if (canReachBeforeExpiry(train, cargo)) {
-            boardCargoToTrain(train, cargo, station);
-        }
-    }
-
-    private void boardCargoToTrain(Train train, Cargo cargo, Station station) {
-        if (train instanceof CargoTrain) {
-            boardCargoToCargoTrain((CargoTrain) train, cargo, station);
-        } else if (train instanceof BulletTrain) {
-            boardCargoToBulletTrain((BulletTrain) train, cargo, station);
-        }
-    }
-
-    private void boardCargoToCargoTrain(CargoTrain train, Cargo cargo, Station station) {
-        train.addCargo(cargo);
-        station.removeCargo(cargo.getId());
-    }
-
-    private void boardCargoToBulletTrain(BulletTrain train, Cargo cargo, Station station) {
-        train.addCargo(cargo);
-        station.removeCargo(cargo.getId());
-    }
-
-    private boolean canReachBeforeExpiry(Train train, Cargo cargo) {
-        if (!cargo.isPerishable())
-            return true;
-
-        double timeToDestination = calculateTimeToDestination(train, cargo.getDestStationId());
-        return timeToDestination <= cargo.getMinsTillPerish();
-    }
-
-    private boolean shouldBoardPassenger(Train train, Passenger passenger) {
-        return willTrainReachDestination(train, passenger.getDestStationId());
     }
 
     private void updateTrainSpeed(Train train) {
-        if (train.getType().equals("RepairTrain")) {
-            train.setSpeed(REPAIR_TRAIN_SPEED);
-            return;
-        }
-
-        double baseSpeed;
-        if (train.getType().equals("PassengerTrain")) {
-            baseSpeed = PASSENGER_TRAIN_SPEED;
-        } else if (train.getType().equals("CargoTrain")) {
-            baseSpeed = CARGO_TRAIN_SPEED;
-        } else {
-            baseSpeed = BULLET_TRAIN_SPEED;
-        }
-
-        int totalWeight = calculateTrainLoadWeight(train);
-        double slowdown = totalWeight * SLOWDOWN_RATE;
-        double newSpeed = baseSpeed * (1.0 - slowdown);
-
-        train.setSpeed(Math.max(0.1, newSpeed));
+        train.updateSpeed();
     }
 
     private void updateTrainRouteIndex(Train train) {
@@ -555,97 +498,15 @@ public class TrainsController {
         if (station == null)
             return;
 
-        unloadPassengersFromTrain(train, station);
-        unloadCargoFromTrain(train, station);
+        train.unloadAtStation(station.getId());
     }
 
-    private void unloadPassengersFromTrain(Train train, Station station) {
-        if (train instanceof PassengerTrain) {
-            unloadPassengersFromPassengerTrain((PassengerTrain) train, station);
-        } else if (train instanceof BulletTrain) {
-            unloadPassengersFromBulletTrain((BulletTrain) train, station);
-        }
-    }
-
-    private void unloadCargoFromTrain(Train train, Station station) {
-        if (train instanceof CargoTrain) {
-            unloadCargoFromCargoTrain((CargoTrain) train, station);
-        } else if (train instanceof BulletTrain) {
-            unloadCargoFromBulletTrain((BulletTrain) train, station);
-        }
-    }
-
-    private void unloadPassengersFromPassengerTrain(PassengerTrain train, Station station) {
-        List<Passenger> arrivedPassengers = findArrivedPassengers(train.getPassengers(), station.getId());
-
-        for (Passenger passenger : arrivedPassengers) {
-            train.removePassenger(passenger);
-        }
-    }
-
-    private void unloadPassengersFromBulletTrain(BulletTrain train, Station station) {
-        List<Passenger> arrivedPassengers = findArrivedPassengers(train.getPassengers(), station.getId());
-
-        for (Passenger passenger : arrivedPassengers) {
-            train.removePassenger(passenger);
-        }
-    }
-
-    private void unloadCargoFromCargoTrain(CargoTrain train, Station station) {
-        List<Cargo> arrivedCargo = findArrivedCargo(train.getCargo(), station.getId());
-
-        for (Cargo cargo : arrivedCargo) {
-            train.removeCargo(cargo);
-            station.addCargo(cargo);
-        }
-    }
-
-    private void unloadCargoFromBulletTrain(BulletTrain train, Station station) {
-        List<Cargo> arrivedCargo = findArrivedCargo(train.getCargo(), station.getId());
-
-        for (Cargo cargo : arrivedCargo) {
-            train.removeCargo(cargo);
-            station.addCargo(cargo);
-        }
-    }
-
-    private List<Passenger> findArrivedPassengers(List<Passenger> passengers, String stationId) {
-        List<Passenger> arrived = new ArrayList<>();
-        for (Passenger p : passengers) {
-            if (p.getDestStationId().equals(stationId)) {
-                arrived.add(p);
-            }
-        }
-        return arrived;
-    }
-
-    private List<Cargo> findArrivedCargo(List<Cargo> cargoList, String stationId) {
-        List<Cargo> arrived = new ArrayList<>();
-        for (Cargo c : cargoList) {
-            if (c.getDestStationId().equals(stationId)) {
-                arrived.add(c);
-            }
-        }
-        return arrived;
-    }
-
-    private boolean willTrainReachDestination(Train train, String destStationId) {
-        List<String> route = train.getRoute();
-        int currentIndex = train.getRouteIndex();
-        int destIndex = route.indexOf(destStationId);
-
-        if (destIndex == -1)
-            return false;
-
-        if (train.isCyclical()) {
+    private boolean canReachBeforeExpiry(Train train, Cargo cargo) {
+        if (!cargo.isPerishable())
             return true;
-        } else {
-            if (train.getDirection() > 0) {
-                return destIndex > currentIndex;
-            } else {
-                return destIndex < currentIndex;
-            }
-        }
+
+        double timeToDestination = calculateTimeToDestination(train, cargo.getDestStationId());
+        return timeToDestination <= cargo.getMinsTillPerish();
     }
 
     private double calculateTimeToDestination(Train train, String destStationId) {
@@ -743,97 +604,13 @@ public class TrainsController {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    private void applyMechanicRepair(Train train, Station station) {
-        if (!train.isRepairTrain()) {
-            return;
-        }
-
-        RepairTrain repairTrain = (RepairTrain) train;
-        int mechanicCount = repairTrain.countMechanics();
-
-        if (mechanicCount == 0) {
-            return;
-        }
-
-        for (Track track : tracks) {
-            if (track.connects(station.getId(), track.getOtherStation(station.getId()))) {
-                if (track.isBreakable()) {
-                    int repair = MECHANIC_REPAIR_AMOUNT + (mechanicCount * MECHANIC_REPAIR_BONUS);
-                    track.repair(repair);
-
-                    if (track.getType() == TrackType.BROKEN && track.getDurability() > 0) {
-                        track.setType(TrackType.UNBROKEN);
-                    }
-                }
-            }
-        }
-    }
-
     private void deterioratePerishables() {
         for (Train train : trains) {
-            if (train instanceof CargoTrain) {
-                removeExpiredCargoFromCargoTrain((CargoTrain) train);
-            } else if (train instanceof BulletTrain) {
-                removeExpiredCargoFromBulletTrain((BulletTrain) train);
-            }
+            train.tick();
         }
 
-        // Deteriorate cargo at stations
         for (Station station : stations) {
-            removeExpiredCargoFromStation(station);
-        }
-    }
-
-    private void removeExpiredCargoFromCargoTrain(CargoTrain train) {
-        List<Cargo> expired = new ArrayList<>();
-
-        for (Cargo cargo : train.getCargo()) {
-            cargo.decrementPerishTime();
-            if (cargo.hasExpired()) {
-                expired.add(cargo);
-            }
-        }
-
-        for (Cargo cargo : expired) {
-            train.removeCargo(cargo);
-        }
-
-        if (!expired.isEmpty()) {
-            updateTrainSpeed(train);
-        }
-    }
-
-    private void removeExpiredCargoFromBulletTrain(BulletTrain train) {
-        List<Cargo> expired = new ArrayList<>();
-
-        for (Cargo cargo : train.getCargo()) {
-            cargo.decrementPerishTime();
-            if (cargo.hasExpired()) {
-                expired.add(cargo);
-            }
-        }
-
-        for (Cargo cargo : expired) {
-            train.removeCargo(cargo);
-        }
-
-        if (!expired.isEmpty()) {
-            updateTrainSpeed(train);
-        }
-    }
-
-    private void removeExpiredCargoFromStation(Station station) {
-        List<Cargo> expired = new ArrayList<>();
-
-        for (Cargo cargo : station.getCargo()) {
-            cargo.decrementPerishTime();
-            if (cargo.hasExpired()) {
-                expired.add(cargo);
-            }
-        }
-
-        for (Cargo cargo : expired) {
-            station.removeCargo(cargo.getId());
+            station.tick();
         }
     }
 

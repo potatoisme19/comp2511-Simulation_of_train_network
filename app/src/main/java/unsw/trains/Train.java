@@ -2,8 +2,15 @@ package unsw.trains;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public abstract class Train {
+    protected static final double PASSENGER_TRAIN_SPEED = 2.0;
+    protected static final double CARGO_TRAIN_SPEED = 3.0;
+    protected static final double BULLET_TRAIN_SPEED = 5.0;
+    protected static final double REPAIR_TRAIN_SPEED = 2.0;
+    protected static final double SLOWDOWN_RATE = 0.0001;
+
     private String id;
     private String currentStation;
     private List<String> route;
@@ -13,6 +20,8 @@ public abstract class Train {
     private double x;
     private double y;
     private boolean isCyclical;
+    private String journeyDepartureStation = null;
+    private List<Load> loads;
 
     public Train(String id, String stationId, List<String> route,
             double speed, boolean isCyclical, double x, double y) {
@@ -25,6 +34,7 @@ public abstract class Train {
         this.isCyclical = isCyclical;
         this.x = x;
         this.y = y;
+        this.loads = new ArrayList<>();
     }
 
     public String getNextStation() {
@@ -33,12 +43,6 @@ public abstract class Train {
     }
 
     public abstract String getType();
-
-    public abstract int getCurrentLoad();
-
-    public abstract List<Passenger> getPassengers();
-
-    public abstract List<Cargo> getCargo();
 
     public abstract boolean canBoardPassenger();
 
@@ -50,23 +54,124 @@ public abstract class Train {
 
     public abstract int getMaxCargoCapacity();
 
-    public abstract void addPassenger(Passenger p);
+    public abstract void updateSpeed();
 
-    public abstract void addCargo(Cargo c);
+    public boolean willReachDestination(String destStationId) {
+        List<String> route = getRoute();
+        int currentIndex = getRouteIndex();
+        int destIndex = route.indexOf(destStationId);
 
-    public abstract void removePassenger(Passenger p);
+        if (destIndex == -1) {
+            return false;
+        }
 
-    public abstract void removeCargo(Cargo c);
+        if (isCyclical()) {
+            return true;
+        } else {
+            return getDirection() > 0 ? destIndex > currentIndex : destIndex < currentIndex;
+        }
+    }
 
-    public abstract void removePassenger(String passengerId);
+    public int countMechanics() {
+        return (int) getPassengers().stream()
+                .filter(Passenger::isMechanic)
+                .count();
+    }
 
-    public abstract void removeCargo(String cargoId);
+    public void addLoad(Load load) {
+        loads.add(load);
+    }
 
-    public abstract void removeArrivedPassengers(String stationId);
+    public void removeLoad(String loadId) {
+        loads.removeIf(l -> l.getId().equals(loadId));
+    }
 
-    public abstract void removeArrivedCargo(String stationId);
+    public List<Load> getLoads() {
+        return new ArrayList<>(loads);
+    }
 
-    // Getters and setters
+    public int getCurrentLoad() {
+        return loads.stream().mapToInt(Load::getWeight).sum();
+    }
+
+    public List<Passenger> getPassengers() {
+        return loads.stream()
+                .filter(l -> l instanceof Passenger)
+                .map(l -> (Passenger) l)
+                .collect(Collectors.toList());
+    }
+
+    public List<Cargo> getCargo() {
+        return loads.stream()
+                .filter(l -> l instanceof Cargo)
+                .map(l -> (Cargo) l)
+                .collect(Collectors.toList());
+    }
+
+    public void addPassenger(Passenger p) {
+        if (canBoardPassenger()) {
+            loads.add(p);
+        }
+    }
+
+    public void addCargo(Cargo c) {
+        if (canBoardCargo()) {
+            loads.add(c);
+        }
+    }
+
+    public void removePassenger(Passenger p) {
+        loads.remove(p);
+    }
+
+    public void removeCargo(Cargo c) {
+        loads.remove(c);
+    }
+
+    public void removePassenger(String passengerId) {
+        loads.removeIf(l -> l instanceof Passenger && l.getId().equals(passengerId));
+    }
+
+    public void removeCargo(String cargoId) {
+        loads.removeIf(l -> l instanceof Cargo && l.getId().equals(cargoId));
+    }
+
+    public void removeArrivedPassengers(String stationId) {
+        loads.removeIf(l -> l instanceof Passenger && l.getDestStationId().equals(stationId));
+    }
+
+    public void removeArrivedCargo(String stationId) {
+        loads.removeIf(l -> l instanceof Cargo && l.getDestStationId().equals(stationId));
+    }
+
+    public void tick() {
+        List<Load> expired = new ArrayList<>();
+        for (Load load : loads) {
+            load.tick();
+            if (load.hasExpired()) {
+                expired.add(load);
+            }
+        }
+        if (!expired.isEmpty()) {
+            loads.removeAll(expired);
+            updateSpeed();
+        }
+    }
+
+    public void unloadAtStation(String stationId) {
+        removeArrivedPassengers(stationId);
+        removeArrivedCargo(stationId);
+    }
+
+    public boolean canCarry(Load load) {
+        if (load instanceof Passenger) {
+            return canBoardPassenger() && getPassengers().size() < getMaxPassengerCapacity();
+        } else if (load instanceof Cargo) {
+            return canBoardCargo() && getCurrentLoad() + load.getWeight() <= getMaxCargoCapacity();
+        }
+        return false;
+    }
+
     public String getId() {
         return id;
     }
@@ -131,5 +236,13 @@ public abstract class Train {
             nextIndex = routeIndex + direction;
         }
         return nextIndex;
+    }
+
+    public String getJourneyDepartureStation() {
+        return journeyDepartureStation;
+    }
+
+    public void setJourneyDepartureStation(String stationId) {
+        this.journeyDepartureStation = stationId;
     }
 }

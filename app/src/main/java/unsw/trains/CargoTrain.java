@@ -66,10 +66,19 @@ public class CargoTrain extends Train {
     }
 
     @Override
+    public void addLoad(Load load) {
+        String type = load.getType();
+        if (type.equals("Cargo") || type.equals("PerishableCargo")) {
+            addCargo((Cargo) load);
+        }
+    }
+
+    @Override
     public void addCargo(Cargo c) {
         if (currentCargoWeight + c.getWeight() <= maxCargoWeight) {
             cargo.add(c);
             currentCargoWeight += c.getWeight();
+            super.addLoad(c);
         }
     }
 
@@ -81,6 +90,7 @@ public class CargoTrain extends Train {
     public void removeCargo(Cargo c) {
         if (cargo.remove(c)) {
             currentCargoWeight -= c.getWeight();
+            super.removeLoad(c.getId());
         }
     }
 
@@ -112,6 +122,15 @@ public class CargoTrain extends Train {
         for (Cargo c : toRemove) {
             removeCargo(c);
         }
+    }
+
+    @Override
+    public void updateSpeed() {
+        double baseSpeed = CARGO_TRAIN_SPEED;
+        int totalWeight = getCurrentLoad();
+        double slowdown = totalWeight * SLOWDOWN_RATE;
+        double newSpeed = baseSpeed * (1.0 - slowdown);
+        setSpeed(Math.max(0.1, newSpeed));
     }
 
     public int getMaxCargoWeight() {
