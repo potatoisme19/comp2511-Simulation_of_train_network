@@ -431,7 +431,7 @@ public class TrainsController {
         for (Passenger passenger : station.getPassengers()) {
             if (shouldBoardPassenger(train, passenger)) {
                 if (hasSpaceForPassenger(train)) {
-                    train.addPassenger(passenger); // Use specific method
+                    train.addPassenger(passenger);
                     station.removePassenger(passenger.getId());
                 }
             }

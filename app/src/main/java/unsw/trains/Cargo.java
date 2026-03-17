@@ -37,7 +37,7 @@ public class Cargo {
     }
 
     public boolean isPerishable() {
-        return minsTillPerish != null;
+        return minsTillPerish != null && minsTillPerish > 0;
     }
 
     public Integer getMinsTillPerish() {
