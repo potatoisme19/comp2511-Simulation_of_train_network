@@ -64,8 +64,9 @@ public abstract class Station {
     public abstract boolean canLoadCargo();
 
     public void addLoad(Load load) {
-        boolean canAccept = (load.getType().equals("Passenger") && canLoadPassengers())
-                || (load.getType().equals("Cargo") && canLoadCargo());
+        boolean canAccept = (load.getType().equals("Passenger")
+                || load.getType().equals("Mechanic") && canLoadPassengers())
+                || (load.getType().equals("Cargo") || load.getType().equals("PerishableCargo") && canLoadCargo());
 
         if (canAccept) {
             loads.add(load);
