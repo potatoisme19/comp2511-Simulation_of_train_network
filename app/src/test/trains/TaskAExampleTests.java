@@ -1,6 +1,6 @@
 package trains;
 
-import org.junit.jupiter.api.Disabled;
+//import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -23,7 +23,6 @@ import static trains.TestHelpers.assertListAreEqualIgnoringOrder;
 @Timeout(value = 5, unit = TimeUnit.SECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
 public class TaskAExampleTests {
     @Test
-    @Disabled // Remove the "@Disabled" annotation to enable the test.
     public void testCreateStations() {
         TrainsController controller = new TrainsController();
 
@@ -43,7 +42,6 @@ public class TaskAExampleTests {
     }
 
     @Test
-    @Disabled // Remove the "@Disabled" annotation to enable the test.
     public void testCreateTracks() {
         TrainsController controller = new TrainsController();
         controller.createStation("s1", "DepotStation", 1.0, 1.0);
@@ -53,7 +51,6 @@ public class TaskAExampleTests {
     }
 
     @Test
-    @Disabled // Remove the "@Disabled" annotation to enable the test.
     public void testCreateTrains() {
         TrainsController controller = new TrainsController();
         controller.createStation("s1", "DepotStation", 1.0, 1.0);
@@ -93,7 +90,6 @@ public class TaskAExampleTests {
     }
 
     @Test
-    @Disabled // Remove the "@Disabled" annotation to enable the test.
     public void testMultipleControllers() {
         /**
          * Note: If you are failing this test, you are likely using static variables in controller

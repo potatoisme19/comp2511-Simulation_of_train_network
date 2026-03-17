@@ -71,7 +71,7 @@ public class TrainsController {
 
     public void createTrain(String trainId, String type, String stationId, List<String> route)
             throws InvalidRouteException {
-        boolean isCyclical = hasTrackBetween(route.get(0), route.get(route.size() - 1));
+        boolean isCyclical = route.size() >= 3 && hasTrackBetween(route.get(0), route.get(route.size() - 1));
 
         if ((type.equals("PassengerTrain") || type.equals("CargoTrain")) && isCyclical) {
             throw new InvalidRouteException("PassengerTrain and CargoTrain can only be on linear route");
