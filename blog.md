@@ -20,7 +20,11 @@
 ### Week 5
 
 > I made load an abtract class and moved passenger and cargo into it as subclass and refactored my code because passenger and cargo has common properties. Open/ Closed principles states that I can add new load types without modifying existing code. it also makes controller method cleaner 
+> I should have moved more functions intot he track class but didnt have time. It would have made teh traincontroller only have create-relevant methods and follow single purpose classes.
 
 ### Overall Reflection
 
-> How do you think you did, challenges you faced, and what you learnt.
+> I think I should have started earlier so that I can plan the design properly before starting, because I spent a lot of time refactoring classes. 
+> I should have explored more options like creating a time interface (to control behaviours related to time, liek perishable, track breaking etc.) or factory patterns when it comes to creting many different trains/ station, even if I dont end up using the design choice. It would help me to learn in depth.
+> I think my controller is too crowded in the final version and some magic numbers are still used. If i had more time I could make this cleaner
+> Although it was not the best code I ahve written, I have spent good effort (and 3 sleepless nights) working on this. I'll do better for the next assignment (and start during flex week LOL)
